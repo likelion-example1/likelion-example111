@@ -4,59 +4,49 @@ import Button from "./Components/Button";
 import Input from "./Components/Input";
 import TextArea from "./Components/TextArea";
 
-const App = () => {
-  // UseState를 사용하여 초깃값 설정
-  const [textValue, setTextValue] = useState("");
-  const [numberValue, setNumberValue] = useState("");
-  const [content, setContent] = useState("");
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-  // 버튼 클릭 시 실행
-  const handleSubmit = () => {
-    alert(
-`문자: ${textValue}
-숫자: ${numberValue}
-텍스트: ${content}`);
-  };
+// 일반 페이지 불러오기
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import WritePage from './pages/WritePage';
+import SearchPage from './pages/SearchPage';
 
+// 마이페이지 관련 불러오기
+import MypageMain from './pages/mypage/MyPageMain';
+import MyPageHistory from './pages/mypage/MyPageHistory';
+import MypageAccount from './pages/mypage/MyPageAccount';
+
+// 채팅 관련 불러오기
+import ChatListPage from './pages/chat/ChatListPage';
+import ChatRoomPage from './pages/chat/ChatRoomPage';
+
+function App() {
   return (
-    <Card>
-      <h2>첫 번째 토이 프로젝트</h2>
-      
-      {/* 텍스트 Input */}
-      <Input 
-        type="text" 
-        value={textValue} 
-        onChange={(e) => setTextValue(e.target.value)}
-        placeholder="문자를 입력하세요" 
-      />
-      <br />
+    <BrowserRouter>
+      <Routes>
+        {/* 시작 화면 및 메인 */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        
+        {/* 부가 기능 */}
+        <Route path="/write" element={<WritePage />} />
+        <Route path="/search" element={<SearchPage />} />
 
-      {/* 숫자 Input */}
-      <Input 
-        type="number" 
-        value={numberValue} 
-        onChange={(e) => setNumberValue(e.target.value)} 
-        placeholder="숫자를 입력하세요" 
-        pattern="[0-9]*" inputmode="numeric" // 모바일 모드에서 숫자 키보드가 뜨도록 설정
-      />
-      <br />
+        {/* 마이페이지 */}
+        <Route path="/mypage" element={<MypageMain />} />
+        <Route path="/mypage/history" element={<MyPageHistory />} />
+        <Route path="/mypage/account" element={<MypageAccount />} />
 
-      {/* TextArea */}
-      <TextArea 
-        value={content} 
-        onChange={(e) => setContent(e.target.value)} 
-        placeholder="텍스트를 입력하세요" 
-      />
-      <br />
-
-      <Button 
-        onClick={handleSubmit} 
-        disabled={content.length === 0} // 텍스트가 비어있으면 버튼 비활성화
-      >
-        버튼
-      </Button>
-    </Card>
+        {/* 채팅 */}
+        <Route path="/chat" element={<ChatListPage />} />
+        <Route path="/chat/:roomId" element={<ChatRoomPage />} /> {/* :roomId는 특정 채팅방의 고유 ID를 받고 이후에 추가 제작 */}
+      </Routes>
+    </BrowserRouter>
   );
-};
+}
+
 
 export default App;
