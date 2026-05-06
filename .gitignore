@@ -48,6 +48,12 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+
+# Node.js
+node_modules/
+
+# VS Code
+.vscode/
 *.cover
 *.py.cover
 .hypothesis/
