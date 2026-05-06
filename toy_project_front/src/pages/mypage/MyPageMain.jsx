@@ -1,69 +1,97 @@
-import { useNavigate } from 'react-router-dom';
-import GNB from '../../Components/GNB';
-import MatchCount from '../../Components/MatchCountBar'; 
+import { useNavigate } from "react-router-dom";
+import GNB from "../../Components/GNB";
+import MatchCount from "../../Components/MatchCountBar";
 
 function MyPageMain() {
   const navigate = useNavigate();
 
   // mock 데이터
   const user = {
-    name: '김이화',
-    id: 'kimewha',
-    matchCount: 3 
+    name: "김이화",
+    id: "kimewha",
+    matchCount: 3,
   };
 
   return (
-    <div>
-      <header style={{ display: 'flex'}}>
-        <img 
-          src="/icons/back.png" 
-          alt="뒤로가기" 
-          onClick={() => navigate('/')}
-          style={{ width: '20px', height: '20px', cursor: 'pointer', marginTop: '12px', marginRight: '12px' }}
-        />
-        <p style={{ fontSize: '20px', fontWeight: 'bold', marginTop: '6px' }}>마이페이지</p>
+    <div className="font-sf relative min-h-screen bg-white px-6 pt-10 pb-28">
+      {/* 헤더: 뒤로가기 버튼 + 타이틀 */}
+      <header className="mb-6 flex items-center gap-2">
+        <button onClick={() => navigate(-1)} className="cursor-pointer p-1">
+          <img src="/icons/back.svg" alt="뒤로가기" className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-medium text-black">마이페이지</h1>
       </header>
 
       <main>
         <section>
-          <div style={{ display: 'flex'}}>
-            <h3 style={{ fontSize: '20px', margin: 0 }}>{user.name}</h3>
-            <span style={{ fontSize: '16px', color: '#555', fontWeight: 'bold', marginLeft: '12px' }}>{user.id}</span>
-          </div>
-          <div>
-
-        <img 
-          src="/images/profileimage.png" 
-          alt="프로필 이미지" 
-          style ={{ width: '300px', height: '300px', marginTop: '12px' }}
-        />
+          {/* 프로필 이름 및 프로필 사진(캐릭터) */}
+          <h2 className="text-blue-main text-center text-4xl font-bold">
+            김이화
+          </h2>
+          <div className="mb-8 flex justify-center">
+            <img
+              src="/images/HanBagunni.png"
+              alt="프로필 캐릭터"
+              className="-mt-10 -mb-15 h-100 w-100 object-contain drop-shadow-md"
+            />
           </div>
         </section>
 
-        <section style={{ borderBottom: '1px solid #bdbdbd' }}>
+        {/* 매칭 횟수 진행바 */}
+        <section className="mb-8 border-b border-[#bdbdbd] pb-8">
           {/* 가상 데이터인 matchCount(3)을 하위 컴포넌트로 전달 */}
-          <MatchCount currentCount={user.matchCount} 
-          />
+          <MatchCount currentCount={user.matchCount} />
         </section>
 
-        <section>
-          <div 
-          onClick={() => navigate('/mypage/account')}
-          style={{ borderBottom: '1px solid #E0E0E0', cursor: 'pointer' }}
+        {/* 메뉴 버튼 영역 */}
+        <section className="flex flex-col gap-4">
+          {/* 계정 정보 버튼 클릭 시 이동 */}
+          <button
+            onClick={() => navigate("/mypage/account")}
+            className="bg-blue-bg flex items-center justify-between rounded-2xl px-6 py-5 shadow-sm transition-transform hover:scale-[1.02]"
           >
-            <p>☞ 계정 정보</p>
-          </div>
-          <div 
-          onClick={() => navigate('/mypage/history')}
-          style={{ borderBottom: '1px solid #E0E0E0', cursor: 'pointer' }}
-          >
-            <p>☞ 나의 매칭 내역</p>
+            <span className="text-gray-8 text-lg font-bold">계정 정보</span>
+            <img
+              src="/icons/AccountInfo.svg"
+              alt="계정 정보"
+              className="h-10 w-10"
+            />
+          </button>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* 나의 매칭 내역 버튼 클릭 시 이동 */}
+            <button
+              onClick={() => navigate("/mypage/history")}
+              className="bg-blue-bg relative flex h-36 flex-col rounded-2xl p-5 shadow-sm transition-transform hover:scale-[1.02]"
+            >
+              <span className="text-gray-8 mt-5 text-left text-lg font-bold whitespace-pre-line">
+                나의{"\n"}매칭 내역
+              </span>
+              <img
+                src="/icons/UsersGroup.svg"
+                alt="나의 매칭 내역"
+                className="absolute mt-6 h-13 w-13 self-end"
+              />
+            </button>
+
+            {/* 나의 게시물 버튼 클릭 시 이동 */}
+            <button
+              onClick={() => navigate("/mypage/posts")}
+              className="bg-blue-bg flex h-36 flex-col justify-between rounded-2xl p-5 shadow-sm transition-transform hover:scale-[1.02]"
+            >
+              <span className="text-gray-8 mt-5 text-left text-lg font-bold whitespace-pre-line">
+                나의{"\n"}게시물
+              </span>
+              <img
+                src="/icons/NoteEdit.svg"
+                alt="나의 게시물"
+                className="absolute mt-6 h-12 w-12 self-end"
+              />
+            </button>
           </div>
         </section>
       </main>
 
-
-      {/* GNB 컴포넌트로 바텀 네비게이션 바 제작 */}
       <GNB />
     </div>
   );
