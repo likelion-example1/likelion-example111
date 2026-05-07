@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const TimelineCard = ({ post }) => {
+const TimelineCard = ({ post, isMyPost }) => {
   // 알림창 표시 여부
   const [isModalOpen, setIsModalOpen] = useState(false);
   // 매칭 신청 완료 여부
@@ -11,14 +11,16 @@ const TimelineCard = ({ post }) => {
       <article className="bg-gray-7 relative mt-4 flex gap-4 rounded-2xl p-4 shadow">
         {/* 우측 상단 '매칭 신청하기' 버튼 */}
         <div
-          onClick={() => !isApplied && setIsModalOpen(true)}
-          className={`absolute -top-3 -right-1 cursor-pointer rounded-full px-3 py-1.5 text-xs font-bold shadow-sm transition-opacity hover:opacity-80 ${
-            isApplied
-              ? "bg-gray-2 text-gray-4 cursor-not-allowed"
+          onClick={() => !isMyPost && !isApplied && setIsModalOpen(true)}
+          className={`absolute -top-3 -right-2 cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold shadow-sm transition-opacity hover:opacity-80 ${
+            // 내가 쓴 글이면 버튼을 클릭할 수 없게 스타일 적용
+            isMyPost || isApplied
+              ? "bg-gray-2 text-gray-1 cursor-not-allowed"
               : "bg-blue-bg text-blue-main"
           }`}
         >
-          {isApplied ? "신청 완료" : "매칭 신청하기"}
+          {/* 조건에 따라 글자를 다르게 보여줌 */}
+          {isMyPost ? "내가 쓴 글" : isApplied ? "신청 완료" : "매칭 신청하기"}
         </div>
 
         {/* 좌측 식당 사진 */}
@@ -50,7 +52,7 @@ const TimelineCard = ({ post }) => {
               </span>
             )}
             <div className="flex">
-              {post.participants.map((_, index) => (
+              {post.participants?.map((_, index) => (
                 <img
                   key={index}
                   src="/images/UserProfileExample.png"
@@ -66,7 +68,7 @@ const TimelineCard = ({ post }) => {
           {/* 키워드 + 금액 */}
           <div className="mt-3 flex items-end justify-between">
             <div className="flex gap-1.5">
-              {post.keywords.map((keyword, index) => (
+              {post.keywords?.map((keyword, index) => (
                 <span
                   key={index}
                   className="bg-gray-3 rounded-full px-2.5 py-1 text-[10px] font-medium text-white"
@@ -84,7 +86,7 @@ const TimelineCard = ({ post }) => {
 
       {/* 매칭 신청하기 버튼 클릭 시 나타나는 모달창 */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 px-4">
           {/* 하얀색 알림창 박스 */}
           <div className="w-72 overflow-hidden rounded-2xl bg-white shadow-xl">
             {/* 텍스트 영역 */}

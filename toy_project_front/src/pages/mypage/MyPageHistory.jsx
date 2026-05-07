@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HistoryCard from "../../Components/HistoryCard"; // 리스트에 들어갈 항목들을 카드 컴포넌트로 제작
+import GNB from "../../Components/GNB";
 
 export function MyPageHistory() {
   const navigate = useNavigate();
@@ -12,36 +13,48 @@ export function MyPageHistory() {
   const historyData = [
     {
       id: 1,
-      type: "received", // '내가 받은' 탭에 보여질 항목
+      type: "received", // 내가 받은 탭에 보여질 것
       author: "김이화",
-      title: "제목",
-      content: "본문 내용",
-      keywords: ["#키워드1", "#키워드2", "#키워드3"],
+      title: "Waffle It Up",
+      content: "2교시 끝나고 와플잇업에서 배달시키실 분 구...",
+      keywords: ["디저트 및 음료", "포스코관"],
       status: "매칭 중",
       matchRate: "80%",
       price: "14,000",
     },
     {
       id: 2,
-      type: "sent", // '내가 보낸' 탭에 보여질 항목
+      type: "received",
       author: "김이화",
-      title: "제목",
-      content: "본문 내용",
-      keywords: ["#키워드1", "#키워드2", "#키워드3"],
-      status: "매칭 완료",
+      title: "아콘스톨",
+      content: "저녁시간에 아콘스톨에서 배달시키실 분 구합...",
+      keywords: ["한식", "포스코관"],
+      status: "매칭 중",
       matchRate: "80%",
-      price: "9,000",
+      price: "14,000",
     },
     {
       id: 3,
       type: "received",
       author: "김이화",
-      title: "제목",
-      content: "본문 내용",
-      keywords: ["#키워드1", "#키워드2", "#키워드3"],
+      title: "카페코지",
+      content: "2교시 끝나고 카페코지에서 배달시키실 분 구...",
+      keywords: ["디저트 및 음료", "포스코관"],
       status: "매칭 완료",
       matchRate: "80%",
-      price: "23,000",
+      price: "14,000",
+    },
+
+    {
+      id: 4,
+      type: "sent",
+      author: "김이화",
+      title: "카페인중독",
+      content: "와플 드실 분?!",
+      keywords: ["디저트 및 음료", "포스코관"],
+      status: "매칭 중",
+      matchRate: "80%",
+      price: "12,000",
     },
   ];
 
@@ -49,60 +62,39 @@ export function MyPageHistory() {
   const filteredData = historyData.filter((post) => post.type === activeTab);
 
   return (
-    <div>
-      <header style={{ display: "flex" }}>
-        <img
-          src="/icons/back.png"
-          alt="뒤로가기"
-          onClick={() => navigate(-1)}
-          style={{
-            width: "20px",
-            height: "20px",
-            cursor: "pointer",
-            marginTop: "12px",
-            marginRight: "12px",
-          }}
-        />
-        <p style={{ fontSize: "20px", fontWeight: "bold", marginTop: "6px" }}>
-          나의 매칭내역
-        </p>
+    <div className="font-sf relative min-h-screen bg-white pt-10 pb-28">
+      <header className="mb-4 flex items-center gap-2 px-6">
+        <button onClick={() => navigate(-1)} className="cursor-pointer p-1">
+          <img src="/icons/back.svg" alt="뒤로가기" className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-black">나의 매칭내역</h1>
       </header>
 
       <main>
-        <div>
+        <div className="bg-blue-bg flex gap-3 px-6 py-4">
           <button
             onClick={() => setActiveTab("received")}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              borderRadius: "10px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              // 선택된 탭은 진한 회색, 선택되지 않은 탭은 배경색과 같은 색으로!
-              backgroundColor:
-                activeTab === "received" ? "#A0A0A0" : "transparent",
-              color: activeTab === "received" ? "#fff" : "#666",
-            }}
+            className={`rounded-xl px-5 py-2.5 text-sm font-bold shadow-sm transition-colors ${
+              activeTab === "received"
+                ? "bg-blue-main text-white"
+                : "bg-white text-black"
+            }`}
           >
             내가 받은
           </button>
           <button
             onClick={() => setActiveTab("sent")}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              borderRadius: "10px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              backgroundColor: activeTab === "sent" ? "#A0A0A0" : "transparent",
-              color: activeTab === "sent" ? "#fff" : "#666",
-            }}
+            className={`rounded-xl px-5 py-2.5 text-sm font-bold shadow-sm transition-colors ${
+              activeTab === "sent"
+                ? "bg-blue-main text-white"
+                : "bg-white text-black"
+            }`}
           >
             내가 보낸
           </button>
         </div>
 
-        <section>
+        <section className="px-6">
           {/* 필터링된 매칭 내역 리스트 */}
           {filteredData.length > 0 ? (
             filteredData.map((post) => (
@@ -110,12 +102,13 @@ export function MyPageHistory() {
             ))
           ) : (
             // 데이터가 없을 때 보여줄 화면 처리
-            <div style={{ padding: "40px 0", color: "#999" }}>
+            <div className="text-gray-4 py-16 text-center font-medium">
               매칭 내역이 없습니다.
             </div>
           )}
         </section>
       </main>
+      <GNB />
     </div>
   );
 }

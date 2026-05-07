@@ -18,6 +18,8 @@ import MypageMain from "./pages/mypage/MyPageMain";
 import MyPageHistory from "./pages/mypage/MyPageHistory";
 import MypageAccount from "./pages/mypage/MyPageAccount";
 import MyPagePosts from "./pages/mypage/MyPagePosts";
+import MyPageHistoryDetail from "./pages/mypage/MyPageHistoryDetail";
+import EditPages from "./pages/mypage/EditPages";
 
 // 채팅 관련 불러오기
 import ChatListPage from "./pages/chat/ChatListPage";
@@ -39,6 +41,11 @@ function App() {
         <Route path="/mypage/history" element={<MyPageHistory />} />
         <Route path="/mypage/account" element={<MypageAccount />} />
         <Route path="/mypage/posts" element={<MyPagePosts />} />
+        <Route
+          path="/mypage/history/:postId"
+          element={<MyPageHistoryDetail />}
+        />
+        <Route path="/mypage/edit" element={<EditPages />} />
         {/* 채팅 */}
         <Route path="/chat" element={<ChatListPage />} />
         <Route path="/chat/:roomId" element={<ChatRoomPage />} />{" "}
