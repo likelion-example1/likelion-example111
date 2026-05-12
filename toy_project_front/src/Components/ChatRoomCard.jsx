@@ -1,6 +1,8 @@
 const ChatRoomCard = ({ room, onClick }) => {
   // '매칭 중'인지 확인하여 파란색 테마를 쓸지, 회색 테마를 쓸지 결정
   const isOngoing = room.status === "매칭 중";
+  const isSender = room.role === "sender";
+
   return (
     <div
       onClick={onClick}
@@ -20,25 +22,35 @@ const ChatRoomCard = ({ room, onClick }) => {
         </div>
 
         <div className="relative">
-          <button
-            className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${
-              isOngoing && room.newRequests > 0
-                ? "bg-blue-main text-white shadow-sm"
-                : "bg-gray-3 text-white" // 사진처럼 매칭 완료 시 회색 배경
-            }`}
-          >
-            새로운 매칭신청
-          </button>
+          {/* 내가 보낸/받은 메시지에 따라 다르게 */}
+          {isSender && isOngoing ? (
+            <button className="bg-blue-bg rounded-lg px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition-all">
+              매칭 대기 중
+            </button>
+          ) : (
+            <button
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${
+                isOngoing && room.newRequests > 0
+                  ? "bg-blue-main text-white shadow-sm"
+                  : "bg-gray-2 text-white"
+              }`}
+            >
+              새로운 매칭신청
+            </button>
+          )}
 
-          {/* 요청이 있을 때만 빨간 배지 표시 */}
-          {room.newRequests > 0 ? (
+          {/* ⭐ 보낸 사람이 아닐 때만 빨간색 알림 숫자 표시 */}
+          {!isSender && isOngoing && room.newRequests > 0 ? (
             <span className="bg-red absolute -top-1.5 -right-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
               {room.newRequests}
             </span>
           ) : (
-            <span className="absolute -top-1.5 -right-1.5 rounded-md bg-[#C27E7E] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-              0
-            </span>
+            !isSender &&
+            isOngoing && (
+              <span className="absolute -top-1.5 -right-1.5 rounded-md bg-[#C27E7E] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                0
+              </span>
+            )
           )}
         </div>
       </div>

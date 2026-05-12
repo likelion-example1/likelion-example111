@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Toast from "../../Components/Toast";
 
 function ChatRoomPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // URL에서 :roomId 부분을 가져오는 useParams 훅
   const { roomId } = useParams();
@@ -11,30 +12,101 @@ function ChatRoomPage() {
   // 채팅 입력창 상태
   const [inputValue, setInputValue] = useState("");
 
-  // 매칭 요청 대기 중인 유저 목록 상태
-  const [requests, setRequests] = useState([
-    { id: 1, name: "diadia" },
-    { id: 2, name: "깨비" },
-    { id: 3, name: "꿀꿀" },
-  ]);
-
   // 주고받은 채팅 메시지 목록 상태 (isMine이 true면 내가 보낸 것)
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "율율", text: "저 메뉴 골랐어요!", isMine: false },
-    { id: 2, sender: "왈왈", text: "저는 다 담았습니다!", isMine: false },
-    { id: 3, sender: "나", text: "율율님", isMine: true },
-    {
-      id: 4,
-      sender: "나",
-      text: "혹시 젤라또 맛 몇 가지로 시키실 예정이세요?",
-      isMine: true,
+  const MOCK_DB = {
+    101: {
+      title: "Waffle it up",
+      role: "receiver",
+      requests: [
+        { id: 1, name: "diadia" },
+        { id: 2, name: "깨비" },
+        { id: 3, name: "꿀꿀" },
+      ],
+      messages: [
+        {
+          id: 1,
+          sender: "율율",
+          text: "저 메뉴 골랐어요!",
+          isMine: false,
+          type: "chat",
+        },
+        {
+          id: 2,
+          sender: "왈왈",
+          text: "저는 다 담았습니다!",
+          isMine: false,
+          type: "chat",
+        },
+        { id: 3, sender: "나", text: "율율님", isMine: true, type: "chat" },
+        {
+          id: 4,
+          sender: "나",
+          text: "혹시 젤라또 맛 몇 가지로 시키실 예정이세요?",
+          isMine: true,
+          type: "chat",
+        },
+      ],
     },
-  ]);
+    102: {
+      title: "Dessert 39",
+      role: "sender", // 내가 보낸 방이므로 수락 창이 뜨지 않음
+      requests: [],
+      messages: [
+        {
+          id: 1,
+          sender: "롱롱",
+          text: "기본 메시지",
+          isMine: false,
+          type: "chat",
+        }, // 이미지와 비슷한 가짜 데이터
+        {
+          id: 2,
+          sender: "tabby",
+          text: "저는 다 담았습니다!",
+          isMine: false,
+          type: "chat",
+        },
+      ],
+    },
+  };
+
+  // roomId에 해당하는 데이터 찾기 (없으면 101번 방 기본 제공)
+  const roomData = MOCK_DB[roomId] || MOCK_DB["101"];
+
+  const [requests, setRequests] = useState(roomData.requests);
+  const [messages, setMessages] = useState(roomData.messages);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  // ChatListPage에서 초대를 받아 넘어왔는지 감지
+  useEffect(() => {
+    if (location.state?.isInvited) {
+      setToastMessage("매칭 초대되었습니다.");
+      setShowToast(true);
+
+      // 중복 메시지 방지
+      setMessages((prev) => {
+        // 이미 초대 메시지가 배열 안에 있다면 기존 배열을 그대로 반환
+        const isAlreadyInvited = prev.some(
+          (msg) => msg.text === "매칭 초대되었습니다.",
+        );
+        if (isAlreadyInvited) return prev;
+
+        // 없다면 새로운 시스템 메시지 추가
+        const sysMsg = {
+          id: Date.now(),
+          type: "system",
+          text: "매칭 초대되었습니다.",
+        };
+        return [...prev, sysMsg];
+      });
+
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // 유저 프로필 클릭 시 모달 열기
   const openModal = (req) => {
@@ -119,15 +191,16 @@ function ChatRoomPage() {
 
         {/* 방 제목 가운데 정렬 */}
         <h2 className="absolute left-1/2 -translate-x-1/2 text-[22px] font-bold text-black">
-          Waffle it up
+          {roomData.title}
         </h2>
         <div className="w-8"></div>
       </header>
 
       {/* 매칭 요청 수락/거절 (대기 중인 요청이 있을 때만 보임) */}
-      {requests.length > 0 && (
+      {/* receiver일 때만 대기자 목록 렌더링 */}
+      {roomData.role === "receiver" && requests.length > 0 && (
         <section className="bg-blue-bg relative z-20 px-6 pt-5 pb-3">
-          <div className="bg-blue-main absolute -top-4 right-6 rounded px-3 py-1.5 text-[13px] font-bold text-white shadow-sm">
+          <div className="bg-blue-main absolute -top-3.5 right-6 rounded px-3 py-1.5 text-[11px] font-bold text-white shadow-sm">
             새로운 매칭신청
             <span className="bg-red absolute -top-2 -right-2 rounded-md px-1.5 py-0.5 text-[10px] text-white">
               {requests.length}
@@ -138,24 +211,19 @@ function ChatRoomPage() {
             {requests.map((req) => (
               <div
                 key={req.id}
-                className="flex min-w-12.5 flex-col items-center"
+                className="flex min-w-12.5 cursor-pointer flex-col items-center"
                 onClick={() => openModal(req)}
               >
-                <div className="mb-1.5 flex h-13 w-13 items-center justify-center overflow-hidden rounded-full">
+                <div className="mb-1.5 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full">
                   <img
                     src="/images/CharacterProfile.png"
                     alt="프로필"
                     className="h-full w-full object-cover"
                   />
                 </div>
-
-                <span
-                  className="mb-0.5 cursor-pointer text-[11px] font-bold text-black"
-                  onClick={() => handleRequest(req.id, "accept")}
-                >
+                <span className="mb-0.5 text-[11px] font-bold text-black">
                   수락하기
                 </span>
-
                 <span className="text-gray-4 text-[10px] font-medium">
                   {req.name}
                 </span>
@@ -168,14 +236,13 @@ function ChatRoomPage() {
       {/* 채팅 메시지 내역 영역 */}
       <main className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-6">
         {messages.map((msg) => {
-          // 시스템 메시지일 경우 (누구님이 입장하셨습니다)
           if (msg.type === "system") {
+            //  시스템 메시지 (누구님이 입장하셨습니다)
             return (
-              <div
-                key={msg.id}
-                className="text-gray-4 my-2 text-center text-[13px] font-bold"
-              >
-                {msg.text}
+              <div key={msg.id} className="my-3 flex justify-center">
+                <span className="border-gray-2 text-blue-bg rounded-2xl border px-5 py-1.5 text-[12px] font-bold">
+                  {msg.text}
+                </span>
               </div>
             );
           }
@@ -189,7 +256,7 @@ function ChatRoomPage() {
               {/* 남이 보낸 메시지 */}
               {!msg.isMine && (
                 <div className="flex max-w-[75%] gap-3">
-                  <div className="border-gray-2 h-12 w-12 shrink-0 overflow-hidden rounded-full border shadow-sm">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full">
                     <img
                       src="/images/CharacterProfile.png"
                       alt="프로필"
@@ -245,7 +312,7 @@ function ChatRoomPage() {
       {isModalOpen && selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-6 backdrop-blur-[1px]">
           <div className="flex w-70 transform flex-col items-center overflow-hidden rounded-2xl bg-white pt-8 shadow-xl transition-all">
-            <div className="border-gray-2 mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border bg-white shadow-sm">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
               <img
                 src="/images/CharacterProfile.png"
                 alt="프로필"

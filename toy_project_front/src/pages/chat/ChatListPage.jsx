@@ -12,7 +12,7 @@ function ChatListPage() {
   const [isPastHidden, setIsPastHidden] = useState(false);
 
   // 가상의 진행 중인 매칭 데이터
-  const activeChats = [
+  const receivedActiveChats = [
     {
       id: 101,
       status: "매칭 중",
@@ -29,7 +29,7 @@ function ChatListPage() {
   ];
 
   // 가상의 지난 매칭 데이터
-  const pastChats = [
+  const receivedPastChats = [
     {
       id: 201,
       status: "매칭 완료",
@@ -58,11 +58,68 @@ function ChatListPage() {
     },
   ];
 
-  // 채팅방 클릭 시 해당 방으로 이동하는 함수
-  const goToChatRoom = (roomId) => {
-    navigate(`/chat/${roomId}`);
-  };
+  const sentActiveChats = [
+    {
+      id: 102,
+      status: "매칭 중",
+      restaurantName: "Dessert 39",
+      locations: ["포스코관"],
+      categories: ["디저트 및 음료"],
+      author: "아기사자",
+      lastMessage: "대화 미리보기 불가능",
+      participants: [1, 2, 3, 4],
+      newRequests: 0,
+      currentAmount: "8,700",
+      targetAmount: "14,000",
+      role: "sender",
+    },
+  ];
+  const sentPastChats = [
+    {
+      id: 202,
+      status: "매칭 완료",
+      restaurantName: "유야케 도쿄",
+      locations: ["포스코관"],
+      categories: ["일식"],
+      author: "yummy",
+      lastMessage: "gamja: 잘 찾아갔습니다!",
+      participants: [1, 2, 3, 4],
+      newRequests: 0,
+      currentAmount: "19,000",
+      targetAmount: "17,000",
+      role: "sender",
+    },
+    {
+      id: 203,
+      status: "매칭 완료",
+      restaurantName: "훅트 포케",
+      locations: ["학문관"],
+      categories: ["샐러드"],
+      author: "집가고싶다",
+      lastMessage: "shushu: 맛있게 드세용",
+      participants: [1, 2, 3, 4],
+      newRequests: 0,
+      currentAmount: "19,000",
+      targetAmount: "17,000",
+      role: "sender",
+    },
+  ];
 
+  // 현재 탭에 따라 보여줄 데이터를 결정
+  const displayActiveChats =
+    activeTab === "received" ? receivedActiveChats : sentActiveChats;
+  const displayPastChats =
+    activeTab === "received" ? receivedPastChats : sentPastChats;
+
+  // 채팅방 클릭 시 해당 방으로 이동하는 함수
+  const goToChatRoom = (room) => {
+    // 내가 보낸 요청 중 '매칭 중'인 방을 누르면, 초대가 수락되었다고 가정하고 이동 (이후 백엔드 로직 구현 후 수정!!)
+    if (room.role === "sender" && room.status === "매칭 중") {
+      navigate(`/chat/${room.id}`, { state: { isInvited: true } });
+    } else {
+      navigate(`/chat/${room.id}`);
+    }
+  };
   return (
     <div className="font-sf min-h-screen bg-white pb-24">
       <header className="flex items-center px-6 pt-12 pb-4">
@@ -107,11 +164,11 @@ function ChatListPage() {
       <main className="px-6 py-2">
         {/* 진행 중인 채팅방 목록 */}
         <section>
-          {activeChats.map((room) => (
+          {displayActiveChats.map((room) => (
             <ChatRoomCard
               key={room.id}
               room={room}
-              onClick={() => goToChatRoom(room.id)}
+              onClick={() => goToChatRoom(room)}
             />
           ))}
         </section>
@@ -130,11 +187,11 @@ function ChatListPage() {
         {/* 지난 매칭 목록 (isPastHidden이 false일 때만 화면에 나타남) */}
         {!isPastHidden && (
           <section>
-            {pastChats.map((room) => (
+            {displayPastChats.map((room) => (
               <ChatRoomCard
                 key={room.id}
                 room={room}
-                onClick={() => goToChatRoom(room.id)}
+                onClick={() => goToChatRoom(room)}
               />
             ))}
           </section>
