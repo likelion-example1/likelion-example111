@@ -1,27 +1,41 @@
-import { Link } from 'react-router-dom';
-import mypageIcon from '../../public/icons/mypage.png';
+import { Link } from "react-router-dom";
 
 function GNB() {
   return (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: '#fff', borderTop: '1px solid #ccc' }}>
-      <ul style={{ display: 'flex', justifyContent: 'space-around', listStyle: 'none', padding: '10px 0', margin: 0 }}>
+    <nav className="font-sf bg-blue-bg fixed bottom-0 left-0 z-50 w-full">
+      <ul className="m-0 flex list-none items-center justify-around p-3">
         <li>
           {/* 클릭 시 /chat (채팅 목록) 경로로 이동 */}
-          <Link to="/chat">채팅</Link>
+          <Link
+            to="/chat"
+            className="flex flex-col items-center text-white no-underline"
+          >
+            <img src="/icons/ChatDefault.svg" alt="채팅" className="h-6 w-6" />
+            <span className="text-sm">Chat</span>
+          </Link>
         </li>
         <li>
           {/* 클릭 시 /home (홈 화면) 경로로 이동 */}
-          <Link to="/">홈</Link>
+          <Link
+            to="/"
+            className="flex flex-col items-center text-white no-underline"
+          >
+            <img src="/icons/HomeDefault.svg" alt="홈" className="h-6 w-6" />
+            <span className="text-sm">Home</span>
+          </Link>
         </li>
         <li>
           {/* 클릭 시 /mypage (마이페이지 메인) 경로로 이동 */}
-          {/* 디자인에는 사람 모양 아이콘이 있으니 나중에 아이콘으로 교체 */}
-          <Link to="/mypage">
-            <img 
-              src={mypageIcon} 
-              alt="마이페이지" 
-              style={{ width: '20px', height: '20px' }}
+          <Link
+            to="/mypage"
+            className="flex flex-col items-center text-white no-underline"
+          >
+            <img
+              src="/icons/MypageDefault.svg"
+              alt="마이페이지"
+              className="h-6 w-6"
             />
+            <span className="text-sm">Mypage</span>
           </Link>
         </li>
       </ul>

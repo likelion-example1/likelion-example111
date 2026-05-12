@@ -1,49 +1,52 @@
-import { Link } from 'react-router-dom'; // 이게 있어야 Link 컴포넌트를 사용 가능
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Input from '../Components/Input';
+import { useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import GNB from "../Components/GNB";
 
-import TextArea from '../Components/TextArea'; 
-import Button from '../Components/Button';
-
+import Input from "../Components/Input";
+import TextArea from "../Components/TextArea";
+import Button from "../Components/Button";
 
 function WritePage() {
-    const navigate = useNavigate();
-    const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fileInputRef = useRef(null);
 
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState("");
 
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [minPrice, setMinPrice] = useState('');
-    const [deliveryFee, setDeliveryFee] = useState('');
-  
-    // 키워드는 여러 개 선택할 수 있으므로 배열([])로 상태 만들기
-    const [selectedLocations, setSelectedLocations] = useState([]);
-    const [selectedCategories, setSelectedCategories] = useState([]);
-  
-    // mock 키워드
-    // 화면에 보여줄 가상의 키워드 목록
-    const locationOptions = ['정문', '후문', '기숙사', '도서관', 'ECC', '기타'];
-    const categoryOptions = ['한식', '중식', '일식', '양식', '분식', '카페'];
+  // 키워드는 여러 개 선택할 수 있으므로 배열([])로 상태 만들기
+  const [selectedLocations, setSelectedLocations] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
 
+  // mock 키워드
+  // 화면에 보여줄 가상의 키워드 목록
+  const locationOptions = ["정문", "후문", "기숙사", "도서관", "ECC", "기타"];
+  const categoryOptions = ["한식", "중식", "일식", "양식", "분식", "카페"];
 
-    // 사진 업로드 시
-    const handleImageClick = () => {
+  // 현재 사용자의 고유 ID
+  const currentUserId = 101;
+
+  // 사진 업로드 시
+  const handleImageClick = () => {
     fileInputRef.current.click();
-    };
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       alert(`${file.name} 사진이 첨부되었습니다!`);
-      }
-    };
+    }
+  };
 
-    // 수령 장소 키워드 클릭 (토글 기능)
+  // 수령 장소 키워드 클릭 (토글 기능)
   const toggleLocation = (location) => {
     if (selectedLocations.includes(location)) {
       // 이미 선택된 거라면 배열에서 뺌
-      setSelectedLocations(selectedLocations.filter(item => item !== location));
+      setSelectedLocations(
+        selectedLocations.filter((item) => item !== location),
+      );
     } else {
       // 선택 안 된 거라면 배열에 추가
       setSelectedLocations([...selectedLocations, location]);
@@ -53,7 +56,9 @@ function WritePage() {
   // 메뉴 카테고리 키워드 클릭 (토글 기능)
   const toggleCategory = (category) => {
     if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter(item => item !== category));
+      setSelectedCategories(
+        selectedCategories.filter((item) => item !== category),
+      );
     } else {
       setSelectedCategories([...selectedCategories, category]);
     }
@@ -62,110 +67,145 @@ function WritePage() {
   // 완료 버튼 클릭 (제출)
   const handleSubmit = () => {
     if (!title || !description) {
-      alert('제목과 설명을 입력해주세요.');
+      alert("제목과 설명을 입력해주세요.");
       return;
     }
-    alert('게시글이 성공적으로 작성되었습니다!');
-    navigate('/'); // 완료 후 홈 화면으로 이동
+    // 홈 화면으로 보낼 '새 글' 데이터 객체
+    const newPostData = {
+      id: Date.now(),
+      restaurantName: title,
+      image: "/images/FoodPhoto.png",
+      authorId: currentUserId,
+      authorName: "김이화",
+      lastMessage: "아직 대화가 없습니다.",
+      participants: [1],
+      currentAmount: "0",
+      targetAmount: minPrice || "14,000",
+      timeAgo: "방금 전",
+      keywords: [...selectedCategories, ...selectedLocations],
+    };
+
+    // 홈으로 이동하면서 정보 전달
+    navigate("/", {
+      state: {
+        showToast: true,
+        message: "업로드 되었습니다!",
+        newPost: newPostData,
+      },
+    });
   };
- 
-    return (
-    <div>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-        <img 
-          src="/icons/back.png" 
-          alt="뒤로가기" 
-          onClick={() => navigate('/')}
-          style={{ width: '20px', height: '20px', cursor: 'pointer', marginTop: '12px', marginRight: '12px' }}
+  return (
+    <div className="font-sf min-h-screen bg-white pb-20">
+      <header className="mt-10 mb-4 flex items-center gap-2 px-6">
+        <img
+          src="/icons/back.svg"
+          alt="뒤로가기"
+          onClick={() => navigate(-1)}
+          className="h-5 w-5 cursor-pointer"
         />
-        <p style={{ fontSize: '20px', fontWeight: 'bold', marginTop: '6px' }}>글 쓰기</p>
-        <Button onClick={handleSubmit} >완료</Button>
+        <h1 className="ml-2 text-lg font-bold text-black">글 쓰기</h1>
       </header>
 
-      <main>
-        {/* 식당 사진 */}
-        <section>
-          <div 
-            onClick={handleImageClick}
-            style={{ width: '80px', height: '80px', backgroundColor: '#E0E0E0', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}
-          >
-            <span style={{ color: '#888' }}>📷</span>
+      <main className="px-6 py-4">
+        {/* 사진 업로드 */}
+        <section className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div
+              onClick={handleImageClick}
+              className="flex h-24 w-30 cursor-pointer flex-col items-center justify-center rounded-lg bg-gray-100 transition-colors hover:bg-gray-200"
+            >
+              <span className="text-xl opacity-40">📷</span>
+              <span className="mt-1 text-xs font-bold text-gray-400">
+                사진 추가
+              </span>
+            </div>
           </div>
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={fileInputRef} 
-            onChange={handleImageChange} 
-            style={{ display: 'none' }} 
+
+          {/* 완료 버튼 */}
+          <Button onClick={handleSubmit} className="mb-12 px-8 py-2">
+            완료
+          </Button>
+
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            className="hidden"
           />
         </section>
-
         {/* 글 제목 */}
-        <section>
-          <h4 style={{ marginBottom: '8px' }}>글 제목</h4>
-          <Input 
-            type="text" 
-            placeholder="글 제목을 입력해주세요" 
-            value={title} 
-            onChange={(e) => setTitle(e.target.value)} 
+        <section className="mb-8">
+          <h4 className="text-blue-main mb-3 text-base font-bold">글 제목</h4>
+          <Input
+            type="text"
+            placeholder="글 제목을 입력해주세요"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </section>
 
         {/* 자세한 설명 */}
-        <section>
-          <h4 style={{ marginBottom: '8px' }}>자세한 설명</h4>
-          <TextArea 
-            placeholder="메뉴, 자세한 위치 등 본문 내용 입력" 
-            value={description} 
-            onChange={(e) => setDescription(e.target.value)} 
-            rows={5} // 여러 줄을 입력할 수 있게 설정
+        <section className="mb-8">
+          <h4 className="text-blue-main mb-3 text-base font-bold">
+            자세한 설명
+          </h4>
+          <TextArea
+            placeholder="메뉴, 자세한 위치 등 본문 내용 입력"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
         </section>
 
         {/* 금액 입력 (원) */}
-        <section style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ flex: 1 }}>
-            <h4 style={{ marginBottom: '8px' }}>최소주문금액</h4>
-            <div style = {{ display: 'flex'}}>
-              <Input 
-                type="number" 
-                value={minPrice} 
-                onChange={(e) => setMinPrice(e.target.value)} 
+        <section className="mb-8 grid grid-cols-2 gap-4">
+          <div>
+            <h4 className="text-blue-main mb-3 text-base font-bold">
+              최소주문금액
+            </h4>
+            <div className="relative flex items-center">
+              <Input
+                type="number"
+                placeholder="0"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="pr-10" // 글자가 길어져도 '원'과 겹치지 않게 우측 여백 추가
               />
-              <span>원</span>
+              <span className="absolute right-4 text-sm font-bold text-black">
+                원
+              </span>
             </div>
           </div>
-          
-          <div style={{ flex: 1 }}>
-            <h4 style={{ marginBottom: '8px' }}>배달비</h4>
-              <div style = {{ display: 'flex'}}>
-              <Input 
-                type="number" 
-                value={deliveryFee} 
-                onChange={(e) => setDeliveryFee(e.target.value)} 
+          <div>
+            <h4 className="text-blue-main mb-3 text-base font-bold">배달비</h4>
+            <div className="relative flex items-center">
+              <Input
+                type="number"
+                placeholder="0"
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+                className="pr-10"
               />
-              <span>원</span>
-              </div>
+              <span className="absolute right-4 text-sm font-bold text-black">
+                원
+              </span>
             </div>
+          </div>
         </section>
 
         {/* 수령 장소 키워드 */}
-        <section>
-          <h4 style={{ marginBottom: '8px' }}>수령 장소</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {locationOptions.map((location, index) => (
-              <button 
-                key={index}
+        <section className="mb-8">
+          <h4 className="text-blue-main mb-3 text-base font-bold">수령 장소</h4>
+          <div className="flex flex-wrap gap-2">
+            {locationOptions.map((location) => (
+              <button
+                key={location}
                 onClick={() => toggleLocation(location)}
-                // 선택된 상태면 진한 회색, 아니면 연한 회색으로 스타일 변경 (토글 기능!!)
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: 'none',
-                  backgroundColor: selectedLocations.includes(location) ? '#888' : '#E0E0E0',
-                  color: selectedLocations.includes(location) ? '#fff' : '#333',
-                  cursor: 'pointer'
-                }}
+                className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
+                  selectedLocations.includes(location)
+                    ? "bg-blue-main text-white shadow-md"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
               >
                 {location}
               </button>
@@ -174,21 +214,20 @@ function WritePage() {
         </section>
 
         {/* 메뉴 카테고리 키워드 */}
-        <section>
-          <h4 style={{ marginBottom: '8px' }}>메뉴 카테고리</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {categoryOptions.map((category, index) => (
-              <button 
-                key={index}
+        <section className="mb-12">
+          <h4 className="text-blue-main mb-3 text-base font-bold">
+            메뉴 카테고리
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {categoryOptions.map((category) => (
+              <button
+                key={category}
                 onClick={() => toggleCategory(category)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: 'none',
-                  backgroundColor: selectedCategories.includes(category) ? '#888' : '#E0E0E0',
-                  color: selectedCategories.includes(category) ? '#fff' : '#333',
-                  cursor: 'pointer'
-                }}
+                className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
+                  selectedCategories.includes(category)
+                    ? "bg-blue-main text-white shadow-md"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
               >
                 {category}
               </button>
@@ -196,7 +235,7 @@ function WritePage() {
           </div>
         </section>
       </main>
-
+      <GNB />
     </div>
   );
 }
