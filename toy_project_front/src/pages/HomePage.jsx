@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom"; // 페이지 이동을 위한 훅
 import GNB from "../Components/GNB"; // GNB 컴포넌트 불러오기
 import TimelineCard from "../Components/TimelineCard";
-import Toast from "../Components/Toast";
+import useToastStore from "../store/useToastStore";
 
 function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+  const showToast = useToastStore((state) => state.showToast);
 
   const currentUserId = 101; // 현재 사용자의 고유 ID (WritePage와 동일하게 설정)
 
@@ -81,8 +80,7 @@ function HomePage() {
       });
 
       // 토스트 알림 띄우기
-      setToastMessage(location.state.message);
-      setShowToast(true);
+      showToast(location.state.message);
 
       // 사용한 state는 비워주기
       window.history.replaceState({}, document.title);
@@ -173,12 +171,6 @@ function HomePage() {
       >
         <img src="/icons/Writing.svg" alt="글 쓰기" className="h-20 w-20" />
       </button>
-
-      <Toast
-        show={showToast}
-        message={toastMessage}
-        onClose={() => setShowToast(false)}
-      />
 
       {/* GNB 컴포넌트로 바텀 네비게이션 바 제작 */}
       <GNB />

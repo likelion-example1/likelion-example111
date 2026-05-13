@@ -1,28 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 import GNB from "../../Components/GNB";
 import MatchCount from "../../Components/MatchCountBar";
-import { useLocation } from "react-router-dom";
 
 function MyPageMain() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [showToast, setShowToast] = useState(false);
-
-  useEffect(() => {
-    // MyPageAccount에서 보낸 state가 있으면 토스트를 띄우기
-    if (location.state?.showToast) {
-      setShowToast(true);
-
-      // 2초 뒤에 자동으로 사라지게 설정
-      const timer = setTimeout(() => {
-        setShowToast(false);
-      }, 2000);
-
-      // 컴포넌트 없어지면 타이머도 없어짐
-      return () => clearTimeout(timer);
-    }
-  }, [location.state?.showToast]);
 
   // mock 데이터
   const user = {
@@ -110,17 +91,6 @@ function MyPageMain() {
           </div>
         </section>
       </main>
-
-      {/* 정보 수정 완료 토스트 메시지 */}
-      {showToast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2">
-          <div className="border-blue-bg rounded-xl border bg-white/90 px-6 py-2.5 shadow-lg backdrop-blur-sm">
-            <p className="text-blue-bg text-[14px] font-bold">
-              정보가 수정되었습니다.
-            </p>
-          </div>
-        </div>
-      )}
 
       <GNB />
     </div>

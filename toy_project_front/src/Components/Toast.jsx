@@ -1,15 +1,20 @@
 import { useEffect } from "react";
+import useToastStore from "../store/useToastStore"; // 스토어 불러오기
 
-const Toast = ({ message, show, onClose }) => {
+const Toast = () => {
+  // 전역 상태에서 필요한 값과 함수 가져오기
+  const { message, show, closeToast } = useToastStore();
+
   useEffect(() => {
     if (show) {
       const timer = setTimeout(() => {
-        onClose(); // 2초 뒤에 부모의 상태를 false로 바꿈
+        closeToast(); // 전역 상태를 false로 바꿈
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [show, onClose]);
+  }, [show, closeToast]);
 
+  // show가 false면 렌더링하지 않음
   if (!show) return null;
 
   return (

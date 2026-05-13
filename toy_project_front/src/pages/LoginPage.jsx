@@ -1,18 +1,46 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+// 전역 상태
+import useAuthStore from "../store/useAuthStore";
+import useToastStore from "../store/useToastStore";
 
 function LoginPage() {
   // 사용자가 입력할 ID와 비밀번호를 저장할 상태 입력
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
 
+  // 로딩 상태를 관리할 state
+  const [isLoading, setIsLoading] = useState(false);
+
   const navigate = useNavigate();
 
+  // Zustand 액션 가져오기
+  const login = useAuthStore((state) => state.login);
+  const showToast = useToastStore((state) => state.showToast);
+
   const handleLogin = (e) => {
-    // 로그인 로직 구현
     e.preventDefault(); // 폼 제출 시 새로고침 방지
-    alert(`${id}님 환영합니다!`);
-    navigate("/");
+
+    // ID나 패스워드 중 하나라도 비어있으면 토스트 띄우기
+    if (!id || !pw) {
+      showToast("ID와 패스워드를 입력해주세요.");
+      return;
+    }
+
+    setIsLoading(true); // 실제 서버에서 정보 가져올 때 로딩 창 띄움
+
+    try {
+      // 실제 서버와 통신할 때는 API 호출하는 코드 작성해야!! (추후 수정)
+
+      // 전역 상태 업데이트
+      login({ id: id });
+      showToast(`${id}님 환영합니다!`);
+      navigate("/");
+    } catch (error) {
+      showToast("로그인에 실패했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = () => {
@@ -71,7 +99,7 @@ function LoginPage() {
           <div className="mt-12 flex justify-center">
             <button
               type="submit"
-              className="bg-blue-bg text-blue-main w-32 rounded-full py-2.5 text-[18px] font-bold transition-transform active:scale-95"
+              className="bg-blue-bg text-blue-main w-32 rounded-full py-2.5 text-[18px] font-bold transition-transform hover:scale-[1.02] hover:cursor-pointer active:scale-95"
             >
               Log in
             </button>
@@ -82,7 +110,7 @@ function LoginPage() {
         <div className="mt-4 text-center">
           <button
             onClick={handleSignup}
-            className="text-[13px] font-medium text-gray-400 underline underline-offset-4"
+            className="hover:text-blue-main text-[13px] font-medium text-gray-400 underline underline-offset-4 hover:cursor-pointer"
           >
             회원가입하기
           </button>

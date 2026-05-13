@@ -1,17 +1,20 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import GNB from "../../Components/GNB";
+
+import useToastStore from "../../store/useToastStore";
+import useModalStore from "../../store/useModalStore";
 
 function MyPageAccount() {
   const navigate = useNavigate();
 
+  const showToast = useToastStore((state) => state.showToast);
+  const openModal = useModalStore((state) => state.openModal);
+
   // 파일 업로드 input을 조작하기 위한 hook
   const fileInputRef = useRef(null);
 
-  // 모달창 열림/닫힘 상태 관리
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 사진과 동일하게 가상 데이터(mock data) 업데이트
+  // 사진과 동일하게 가상 데이터 업데이트
   const user = {
     name: "김이화",
     id: "ewhakim",
@@ -27,14 +30,37 @@ function MyPageAccount() {
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
-      alert(`${file.name} 사진이 선택되었습니다.`);
+      showToast(`${file.name} 사진이 선택되었습니다.`);
     }
   };
 
   // 완료 버튼 클릭 시 실행
   const handleComplete = () => {
-    // 이동할 때 state를 함께 넘겨서 MyPageMain에서 알림을 띄울 수 있게 함
-    navigate("/mypage", { state: { showToast: true } });
+    showToast("정보가 수정되었습니다.");
+    navigate("/mypage");
+  };
+
+  // 취소 버튼 클릭 시 실행될 모달 호출 함수
+  const handleCancelClick = () => {
+    openModal({
+      content: (
+        <>
+          취소 시 작성하신 내용이
+          <br />
+          저장되지 않습니다.
+          <br />
+          취소하시겠습니까?
+        </>
+      ),
+      showImage: false,
+      acceptText: "예",
+      rejectText: "아니오",
+      onAccept: () => {
+        // '예'를 눌렀을 때 마이페이지 메인으로 이동
+        navigate("/mypage");
+      },
+      // '아니오'를 누르면 창만 닫힘
+    });
   };
 
   return (
@@ -102,10 +128,10 @@ function MyPageAccount() {
           {/* 현재 비밀번호 */}
           <div className="flex items-center">
             <div className="mr-4 flex w-30 shrink-0 justify-between">
-              <span className="text-[16px] font-bold text-black">
+              <span className="text-base font-bold text-black">
                 현재 비밀번호
               </span>
-              <span className="text-[16px] font-bold text-black">|</span>
+              <span className="text-base font-bold text-black">|</span>
             </div>
             <span className="text-[15px] font-medium text-gray-500">
               {user.currentPw}
@@ -115,10 +141,10 @@ function MyPageAccount() {
           {/* 비밀번호 변경 1 */}
           <div className="flex items-center">
             <div className="mr-4 flex w-30 shrink-0 justify-between">
-              <span className="text-[16px] font-bold text-black">
+              <span className="text-base font-bold text-black">
                 비밀번호 변경
               </span>
-              <span className="text-[16px] font-bold text-black">|</span>
+              <span className="text-base font-bold text-black">|</span>
             </div>
             <input
               type="password"
@@ -130,10 +156,10 @@ function MyPageAccount() {
           {/* 비밀번호 변경 2 */}
           <div className="flex items-center">
             <div className="mr-4 flex w-30 shrink-0 justify-between">
-              <span className="text-[16px] font-bold text-black">
+              <span className="text-base font-bold text-black">
                 비밀번호 변경
               </span>
-              <span className="text-[16px] font-bold text-black">|</span>
+              <span className="text-base font-bold text-black">|</span>
             </div>
             <input
               type="password"
@@ -146,8 +172,8 @@ function MyPageAccount() {
         {/* 하단 버튼 영역 */}
         <div className="mt-16 flex justify-center gap-4">
           <button
-            onClick={() => setIsModalOpen(true)} // 취소 버튼 누르면 모달창 열림
-            className="w-30 rounded-full bg-[#AFAFAF] py-3 text-[15px] font-bold text-white shadow-sm transition-transform hover:scale-[1.02]"
+            onClick={handleCancelClick} // 취소 버튼 누르면 모달창 열림
+            className="bg-gray-3 w-30 rounded-full py-3 text-[15px] font-bold text-white shadow-sm transition-transform hover:scale-[1.02]"
           >
             취소
           </button>
@@ -160,36 +186,6 @@ function MyPageAccount() {
         </div>
       </main>
 
-      {/* --- 취소 확인 모달창 --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-10">
-          <div className="w-full max-w-sm overflow-hidden rounded-[20px] bg-white shadow-xl">
-            <div className="px-6 py-10 text-center">
-              <p className="text-[18px] leading-relaxed font-bold text-black">
-                취소 시 작성하신 내용이
-                <br />
-                저장되지 않습니다.
-                <br />
-                취소하시겠습니까?
-              </p>
-            </div>
-            <div className="flex border-t border-gray-200">
-              <button
-                onClick={() => setIsModalOpen(false)} // 아니오: 모달 닫기
-                className="flex-1 border-r border-gray-200 py-4 text-[18px] font-medium text-gray-400"
-              >
-                아니오
-              </button>
-              <button
-                onClick={() => navigate("/mypage")} // 예: 메인으로 이동
-                className="flex-1 py-4 text-[18px] font-bold text-black"
-              >
-                예
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <GNB />
     </div>
   );

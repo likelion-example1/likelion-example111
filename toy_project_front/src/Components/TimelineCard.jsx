@@ -1,17 +1,42 @@
 import { useState } from "react";
+import useModalStore from "../store/useModalStore";
 
 const TimelineCard = ({ post, isMyPost }) => {
-  // 알림창 표시 여부
-  const [isModalOpen, setIsModalOpen] = useState(false);
   // 매칭 신청 완료 여부
   const [isApplied, setIsApplied] = useState(false);
+
+  // Zustand 액션 가져오기
+  const openModal = useModalStore((state) => state.openModal);
+
+  // 매칭 신청하기 버튼 클릭 시
+  const handleApplyClick = () => {
+    if (isMyPost || isApplied) return;
+
+    // 전역 모달 띄우기
+    openModal({
+      content: (
+        <>
+          '{post.restaurantName}'에
+          <br />
+          매칭신청을 보내시겠습니까?
+        </>
+      ),
+      showImage: false,
+      acceptText: "예",
+      rejectText: "아니오",
+      onAccept: () => {
+        // '예'를 눌렀을 때 상태를 '신청 완료'로 변경
+        setIsApplied(true);
+      },
+    });
+  };
   return (
     <>
       {/* 매칭 신청하기 버튼 위치 때문에 relative, mt-4를 준다 */}
       <article className="bg-gray-7 relative mt-4 flex gap-4 rounded-2xl p-4 shadow">
         {/* 우측 상단 '매칭 신청하기' 버튼 */}
         <div
-          onClick={() => !isMyPost && !isApplied && setIsModalOpen(true)}
+          onClick={handleApplyClick}
           className={`absolute -top-3 -right-2 cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold shadow-sm transition-opacity hover:opacity-80 ${
             // 내가 쓴 글이면 버튼을 클릭할 수 없게 스타일 적용
             isMyPost || isApplied
@@ -83,43 +108,6 @@ const TimelineCard = ({ post, isMyPost }) => {
           </div>
         </div>
       </article>
-
-      {/* 매칭 신청하기 버튼 클릭 시 나타나는 모달창 */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 px-4">
-          {/* 하얀색 알림창 박스 */}
-          <div className="w-72 overflow-hidden rounded-2xl bg-white shadow-xl">
-            {/* 텍스트 영역 */}
-            <div className="px-4 py-8 text-center">
-              <p className="text-lg font-bold text-black">
-                '{post.restaurantName}'에
-              </p>
-              <p className="text-lg font-bold text-black">
-                매칭신청을 보내시겠습니까?
-              </p>
-            </div>
-
-            {/* 버튼 영역 */}
-            <div className="flex border-t border-gray-200">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="flex-1 border-r border-gray-200 py-3 text-base font-medium text-gray-500 hover:bg-gray-50"
-              >
-                아니오
-              </button>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setIsApplied(true);
-                }}
-                className="flex-1 py-3 text-base font-bold text-black hover:bg-gray-50"
-              >
-                예
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

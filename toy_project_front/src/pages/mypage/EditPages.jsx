@@ -1,15 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Input from "../../Components/Input";
 import TextArea from "../../Components/TextArea";
 import Button from "../../Components/Button";
 import GNB from "../../Components/GNB";
 
+import useToastStore from "../../store/useToastStore";
+
 // WritePage와 거의 동일한 구조. 기존 게시글 데이터 받아와서 수정하는 게 차이점.
 function EditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef(null);
+
+  const showToast = useToastStore((state) => state.showToast);
 
   // MyPagePosts에서 넘겨준 게시글 데이터 받기
   const postToEdit = location.state?.post || {};
@@ -69,7 +73,7 @@ function EditPage() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) alert(`${file.name} 사진이 첨부되었습니다!`);
+    if (file) showToast(`${file.name} 사진이 첨부되었습니다!`);
   };
 
   const toggleLocation = (location) => {
@@ -90,16 +94,12 @@ function EditPage() {
 
   const handleSubmit = () => {
     if (!title || !description) {
-      alert("제목과 설명을 입력해주세요.");
+      showToast("제목과 설명을 입력해주세요.");
       return;
     }
     // 수정 완료 후 마이페이지(내가 쓴 글)로 돌아가며 알림 띄우기
-    navigate("/mypage/posts", {
-      state: {
-        showToast: true,
-        message: "게시글이 성공적으로 수정되었습니다!",
-      },
-    });
+    showToast("게시글이 수정되었습니다.");
+    navigate("/mypage/posts");
   };
 
   return (

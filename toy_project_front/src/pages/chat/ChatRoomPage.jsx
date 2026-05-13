@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import Toast from "../../Components/Toast";
+
+import useToastStore from "../../store/useToastStore";
+import useModalStore from "../../store/useModalStore";
 
 function ChatRoomPage() {
   const navigate = useNavigate();
@@ -8,6 +10,9 @@ function ChatRoomPage() {
 
   // URL에서 :roomId 부분을 가져오는 useParams 훅
   const { roomId } = useParams();
+
+  const showToast = useToastStore((state) => state.showToast);
+  const openModal = useModalStore((state) => state.openModal);
 
   // 채팅 입력창 상태
   const [inputValue, setInputValue] = useState("");
@@ -76,16 +81,10 @@ function ChatRoomPage() {
   const [requests, setRequests] = useState(roomData.requests);
   const [messages, setMessages] = useState(roomData.messages);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-
   // ChatListPage에서 초대를 받아 넘어왔는지 감지
   useEffect(() => {
     if (location.state?.isInvited) {
-      setToastMessage("매칭 초대되었습니다.");
-      setShowToast(true);
+      showToast("매칭 초대되었습니다.");
 
       // 중복 메시지 방지
       setMessages((prev) => {
@@ -109,43 +108,36 @@ function ChatRoomPage() {
   }, [location]);
 
   // 유저 프로필 클릭 시 모달 열기
-  const openModal = (req) => {
-    setSelectedRequest(req);
-    setIsModalOpen(true);
-  };
+  const handleOpenModal = (req) => {
+    openModal({
+      content: (
+        <>
+          ‘{req.name}’ 유저의 매칭신청을
+          <br />
+          수락하시겠습니까?
+        </>
+      ),
+      showImage: true,
+      acceptText: "수락",
+      rejectText: "거절",
+      onAccept: () => {
+        // 수락 시 시스템 메시지 추가 및 토스트 알림
+        const systemMessage = {
+          id: Date.now(),
+          type: "system",
+          text: `${req.name} 님이 입장하셨습니다.`,
+        };
+        setMessages((prev) => [...prev, systemMessage]);
+        showToast("매칭 완료되었습니다.");
 
-  // 모달에서 수락/거절 버튼 클릭 시 처리
-  const processRequest = (action) => {
-    if (action === "accept") {
-      // 수락 시 시스템 메시지 추가
-      const systemMessage = {
-        id: Date.now(),
-        type: "system", //
-        text: `${selectedRequest.name} 님이 입장하셨습니다.`,
-      };
-      setMessages((prev) => [...prev, systemMessage]);
-
-      // 토스트 알림 띄우기
-      setToastMessage("매칭 완료되었습니다.");
-      setShowToast(true);
-    }
-
-    // 수락이든 거절이든 해당 유저를 대기 목록에서 삭제 (빨간 숫자도 자동 감소!!)
-    setRequests((prev) => prev.filter((req) => req.id !== selectedRequest.id));
-
-    // 모달 닫기
-    setIsModalOpen(false);
-    setSelectedRequest(null);
-  };
-
-  // 매칭 요청 수락/거절 함수
-  const handleRequest = (userId, action) => {
-    if (action === "accept") {
-      alert("매칭 요청을 수락했습니다.");
-    } else {
-      alert("매칭 요청을 거절했습니다.");
-    }
-    setRequests(requests.filter((req) => req.id !== userId));
+        // 목록에서 제거
+        setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      },
+      onReject: () => {
+        // 거절 시 목록에서만 제거
+        setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      },
+    });
   };
 
   // 메시지 전송 함수
@@ -212,7 +204,7 @@ function ChatRoomPage() {
               <div
                 key={req.id}
                 className="flex min-w-12.5 cursor-pointer flex-col items-center"
-                onClick={() => openModal(req)}
+                onClick={() => handleOpenModal(req)}
               >
                 <div className="mb-1.5 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full">
                   <img
@@ -307,49 +299,6 @@ function ChatRoomPage() {
           </button>
         </div>
       </footer>
-
-      {/* 매칭 수락/거절 모달창 */}
-      {isModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-6 backdrop-blur-[1px]">
-          <div className="flex w-70 transform flex-col items-center overflow-hidden rounded-2xl bg-white pt-8 shadow-xl transition-all">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
-              <img
-                src="/images/CharacterProfile.png"
-                alt="프로필"
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <p className="mb-8 px-6 text-center text-[16px] leading-relaxed font-bold text-black">
-              ‘{selectedRequest.name}’ 유저의 매칭신청을
-              <br />
-              수락하시겠습니까?
-            </p>
-
-            <div className="border-gray-2 flex w-full border-t bg-gray-50">
-              <button
-                onClick={() => processRequest("reject")}
-                className="border-gray-2 text-gray-4 flex-1 border-r py-3.5 text-[15px] font-bold transition-colors hover:bg-gray-200"
-              >
-                거절
-              </button>
-              <button
-                onClick={() => processRequest("accept")}
-                className="text-blue-main flex-1 py-3.5 text-[15px] font-bold transition-colors hover:bg-blue-50"
-              >
-                수락
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 공통 토스트 알림창 */}
-      <Toast
-        show={showToast}
-        message={toastMessage}
-        onClose={() => setShowToast(false)}
-      />
     </div>
   );
 }
