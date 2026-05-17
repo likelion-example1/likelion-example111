@@ -166,7 +166,7 @@ function MyPagePosts() {
                   </button>
                   <button
                     onClick={() => handleDeleteClick(post)}
-                    className="bg-gray-3 rounded-full px-5 py-1.5 text-[13px] font-bold text-gray-600 shadow-sm transition-transform hover:scale-[1.02]"
+                    className="bg-gray-3 rounded-full px-5 py-1.5 text-[13px] font-bold text-gray-600 shadow-sm transition-transform hover:scale-[1.02] hover:cursor-pointer"
                   >
                     삭제하기
                   </button>
