@@ -39,7 +39,7 @@ const ChatRoomCard = ({ room, onClick }) => {
             </button>
           )}
 
-          {/* ⭐ 보낸 사람이 아닐 때만 빨간색 알림 숫자 표시 */}
+          {/* 보낸 사람이 아닐 때만 빨간색 알림 숫자 표시 */}
           {!isSender && isOngoing && room.newRequests > 0 ? (
             <span className="bg-red absolute -top-1.5 -right-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
               {room.newRequests}

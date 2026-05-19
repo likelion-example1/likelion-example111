@@ -1,10 +1,17 @@
-import { useState } from "react"; // UseState 사용하려면 import 해와야!!
-import Card from "./Components/Card";
-import Button from "./Components/Button";
-import Input from "./Components/Input";
-import TextArea from "./Components/TextArea";
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import useAuthStore from "./store/useAuthStore";
+import useToastStore from "./store/useToastStore";
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// 전역 상태 관리
+import Toast from "./Components/Toast";
+import Modal from "./Components/Modal";
 
 // 일반 페이지 불러오기
 import HomePage from "./pages/HomePage";
@@ -25,32 +32,73 @@ import EditPages from "./pages/mypage/EditPages";
 import ChatListPage from "./pages/chat/ChatListPage";
 import ChatRoomPage from "./pages/chat/ChatRoomPage";
 
+// 리디렉션 로직
+// useNavigate 써야 해서 별도 컴포넌트로 분리
+function AuthGuard({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuthStore();
+  const showToast = useToastStore((state) => state.showToast);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // 로그인 안 한 사용자가 보호된 홈페이지에 접근할 때
+    const publicPaths = ["/login", "/signup"];
+    const isPublicPath = publicPaths.includes(location.pathname);
+
+    if (!isLoggedIn && !isPublicPath) {
+      showToast("로그인이 필요한 서비스입니다.");
+      navigate("/login", { replace: true });
+    }
+
+    // 이미 로그인한 사용자가 로그인/회원가입 페이지에 접근할 때
+    if (isLoggedIn && isPublicPath) {
+      navigate("/", { replace: true });
+    }
+
+    setIsInitialized(true);
+  }, [isLoggedIn, location.pathname, navigate, showToast]);
+
+  // 초기 체크가 끝나기 전에는 아무것도 보여주지 않음
+  if (!isInitialized) return null;
+
+  return children;
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* 시작 화면 및 메인 */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        {/* 부가 기능 */}
-        <Route path="/write" element={<WritePage />} />
-        <Route path="/search" element={<SearchPage />} />
-        {/* 마이페이지 */}
-        <Route path="/mypage" element={<MypageMain />} />
-        <Route path="/mypage/history" element={<MyPageHistory />} />
-        <Route path="/mypage/account" element={<MypageAccount />} />
-        <Route path="/mypage/posts" element={<MyPagePosts />} />
-        <Route
-          path="/mypage/history/:postId"
-          element={<MyPageHistoryDetail />}
-        />
-        <Route path="/mypage/edit" element={<EditPages />} />
-        {/* 채팅 */}
-        <Route path="/chat" element={<ChatListPage />} />
-        <Route path="/chat/:roomId" element={<ChatRoomPage />} />{" "}
-        {/* :roomId는 특정 채팅방의 고유 ID를 받고 이후에 추가 제작 */}
-      </Routes>
+      {/* AuthGuard로 전체 Routes를 감싸서 페이지 이동 시마다 검사 */}
+      <AuthGuard>
+        {/* 전역 상태 */}
+        <Toast />
+        <Modal />
+
+        {/* 라우팅 설정 */}
+        <Routes>
+          {/* 시작 화면 및 메인 */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          {/* 부가 기능 */}
+          <Route path="/write" element={<WritePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          {/* 마이페이지 */}
+          <Route path="/mypage" element={<MypageMain />} />
+          <Route path="/mypage/history" element={<MyPageHistory />} />
+          <Route path="/mypage/account" element={<MypageAccount />} />
+          <Route path="/mypage/posts" element={<MyPagePosts />} />
+          <Route
+            path="/mypage/history/:postId"
+            element={<MyPageHistoryDetail />}
+          />
+          <Route path="/mypage/edit" element={<EditPages />} />
+          {/* 채팅 */}
+          <Route path="/chat" element={<ChatListPage />} />
+          <Route path="/chat/:roomId" element={<ChatRoomPage />} />{" "}
+          {/* :roomId는 특정 채팅방의 고유 ID를 받고 이후에 추가 제작 */}
+        </Routes>
+      </AuthGuard>
     </BrowserRouter>
   );
 }
