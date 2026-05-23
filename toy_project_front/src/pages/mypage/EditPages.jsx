@@ -1,13 +1,17 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+
+import api from "../../api.js";
+
 import Input from "../../Components/Input";
 import TextArea from "../../Components/TextArea";
 import Button from "../../Components/Button";
 import GNB from "../../Components/GNB";
 
-import useToastStore from "../../store/useToastStore";
+import useToastStore from "../../store/useToastStore.js";
 
 // WritePage와 거의 동일한 구조. 기존 게시글 데이터 받아와서 수정하는 게 차이점.
+
 function EditPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,6 +32,7 @@ function EditPage() {
     "학문관",
     "중앙도서관",
   ];
+
   const categoryOptions = [
     "한식",
     "분식",
@@ -38,31 +43,31 @@ function EditPage() {
     "디저트 및 음료",
   ];
 
-  // 실제 데이터의 이름표(restaurantName, lastMessage 등)에 맞게 연결
-  // 데이터가 없을 때를 대비해 기본값도 넣어줌
-  const [title, setTitle] = useState(
-    postToEdit.restaurantName || "Waffle It Up",
-  );
+  // 백엔드 필드 명세와 기존 가상 데이터를 결합
+  const [title, setTitle] = useState(postToEdit.title || "제목이 없습니다.");
+
   const [description, setDescription] = useState(
-    postToEdit.lastMessage ||
-      "2교시 끝나고 와플잇업에서 배달시키실 분 구합니다! 이번 교시 끝나고 1시 40분쯤 미리 시킬 생각입니당\n여기 젤라또 그린티쿠키랑 딸기밀크티 새로 나왔는데 맛있어용\n포관 오봉도시락 앞에서 픽업해요!!",
+    postToEdit.body || "내용이 없습니다.",
   );
 
   const [minPrice, setMinPrice] = useState(
     postToEdit.targetAmount
       ? postToEdit.targetAmount.replace(/,/g, "") // 금액에 쉼표는 제거
-      : "14000",
+      : "14000", // 백엔드에 없는 고정값...
   );
-  const [deliveryFee, setDeliveryFee] = useState(postToEdit.deliveryFee || "0");
 
-  // keywords 배열 하나에 뭉쳐있던 태그들을 '수령장소'와 '카테고리'로 찢기
-  const safeKeywords = postToEdit.keywords || ["포스코관", "디저트 및 음료"];
-  const initialLocations = safeKeywords.filter((kw) =>
-    locationOptions.includes(kw),
-  );
-  const initialCategories = safeKeywords.filter((kw) =>
-    categoryOptions.includes(kw),
-  );
+  const [deliveryFee, setDeliveryFee] = useState(postToEdit.deliveryFee || "0"); // 고정값
+
+  // keywords 처리
+  const safeKeywords = postToEdit.keywords || ["없음", "없음"];
+
+  const initialLocations = postToEdit.location
+    ? [postToEdit.location]
+    : safeKeywords.filter((kw) => locationOptions.includes(kw));
+
+  const initialCategories = postToEdit.category
+    ? [postToEdit.category]
+    : safeKeywords.filter((kw) => categoryOptions.includes(kw));
 
   // undefined 에러가 나지 않게 분리된 배열을 넣기
   const [selectedLocations, setSelectedLocations] = useState(initialLocations);
@@ -73,6 +78,7 @@ function EditPage() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+
     if (file) showToast(`${file.name} 사진이 첨부되었습니다!`);
   };
 
@@ -92,19 +98,42 @@ function EditPage() {
     );
   };
 
-  const handleSubmit = () => {
+  // 게시글 수정 완료 처리 (PUT)
+  const handleSubmit = async () => {
     if (!title || !description) {
       showToast("제목과 설명을 입력해주세요.");
       return;
     }
-    // 수정 완료 후 마이페이지(내가 쓴 글)로 돌아가며 알림 띄우기
-    showToast("게시글이 수정되었습니다.");
-    navigate("/mypage/posts");
+
+    try {
+      const payload = {
+        title: title,
+        body: description,
+        location: selectedLocations[0] || "없음", // 단일 선택 매핑 처리
+        category: selectedCategories[0] || "없음", // 단일 선택 매핑 처리
+        language: 1, // API 필수값
+        // 백엔드에 현재 없는 값(최소주문금액, 배달비 등)은 추후 수정해야함
+      };
+
+      console.log("벡엔드로 전달하기 직전의 payload:", payload);
+
+      if (postToEdit.id) {
+        await api.put(`/posts/${postToEdit.id}/`, payload);
+        showToast("게시글이 수정되었습니다.");
+        navigate("/mypage/posts");
+      } else {
+        showToast("수정할 게시글 정보를 찾을 수 없습니다.");
+      }
+    } catch (error) {
+      console.error("게시글 수정 실패:", error);
+      showToast("게시글 수정에 실패했습니다.");
+    }
   };
 
   return (
     <div className="font-sf min-h-screen bg-white pb-28">
       {/* --- 상단 헤더 --- */}
+
       <header className="flex items-center gap-4 px-6 pt-10 pb-4">
         <img
           src="/icons/back.svg"
@@ -112,11 +141,13 @@ function EditPage() {
           onClick={() => navigate(-1)}
           className="h-5 w-5 cursor-pointer"
         />
+
         <h1 className="text-xl font-bold text-black">글 수정</h1>
       </header>
 
       <main className="px-6 py-4">
         {/* 사진 업로드 + 완료 버튼 */}
+
         <section className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div
@@ -145,8 +176,10 @@ function EditPage() {
         </section>
 
         {/* --- 글 제목 --- */}
+
         <section className="mb-6">
           <h4 className="text-blue-main mb-3 text-[15px] font-bold">글 제목</h4>
+
           <Input
             type="text"
             value={title}
@@ -156,10 +189,12 @@ function EditPage() {
         </section>
 
         {/* --- 자세한 설명 --- */}
+
         <section className="mb-6">
           <h4 className="text-blue-main mb-3 text-[15px] font-bold">
             자세한 설명
           </h4>
+
           <TextArea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -168,11 +203,13 @@ function EditPage() {
         </section>
 
         {/* --- 금액 입력 (2분할) --- */}
+
         <section className="mb-6 grid grid-cols-1 gap-6">
           <div>
             <h4 className="text-blue-main mb-3 text-[15px] font-bold">
               최소주문금액
             </h4>
+
             <div className="relative flex items-center">
               <Input
                 type="text"
@@ -180,15 +217,18 @@ function EditPage() {
                 onChange={(e) => setMinPrice(e.target.value)}
                 className="bg-gray-7 pr-10 font-bold text-black"
               />
+
               <span className="text-gray-4 absolute right-4 text-sm font-bold">
                 원
               </span>
             </div>
           </div>
+
           <div>
             <h4 className="text-blue-main mb-3 text-[15px] font-bold">
               배달비
             </h4>
+
             <div className="relative flex items-center">
               <Input
                 type="text"
@@ -196,6 +236,7 @@ function EditPage() {
                 onChange={(e) => setDeliveryFee(e.target.value)}
                 className="bg-gray-7 pr-10 font-bold text-black"
               />
+
               <span className="text-gray-4 absolute right-4 text-sm font-bold">
                 원
               </span>
@@ -204,10 +245,12 @@ function EditPage() {
         </section>
 
         {/* --- 수령 장소 --- */}
+
         <section className="mb-6">
           <h4 className="text-blue-main mb-3 text-[15px] font-bold">
             수령 장소
           </h4>
+
           <div className="flex flex-wrap gap-2.5">
             {locationOptions.map((location) => (
               <button
@@ -226,10 +269,12 @@ function EditPage() {
         </section>
 
         {/* --- 메뉴 카테고리 --- */}
+
         <section className="mb-10">
           <h4 className="text-blue-main mb-3 text-[15px] font-bold">
             메뉴 카테고리
           </h4>
+
           <div className="flex flex-wrap gap-2.5">
             {categoryOptions.map((category) => (
               <button
@@ -249,6 +294,7 @@ function EditPage() {
       </main>
 
       {/* 하단 네비게이션 바 */}
+
       <GNB />
     </div>
   );

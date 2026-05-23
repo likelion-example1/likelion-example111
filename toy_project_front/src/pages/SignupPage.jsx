@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api.js";
+import useToastStore from "../store/useToastStore.js";
 
 function SignupPage() {
   // 4개의 입력창을 위한 상태 입력
@@ -8,37 +10,67 @@ function SignupPage() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [userName, setUserName] = useState("");
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
 
   // ID 중복확인 버튼 클릭 시 실행될 함수
-  const handleCheckDuplicate = () => {
+  const handleCheckDuplicate = async () => {
     if (id === "") {
-      alert("ID를 먼저 입력해주세요.");
+      showToast("ID를 먼저 입력해주세요.");
       return;
     }
     // 실제 중복 여부 확인하는 로직은 나중에
-    alert("사용 가능한 ID입니다!");
+    showToast("사용 가능한 ID입니다!");
   };
 
   // 회원가입 버튼 클릭 시 실행될 함수
-  const handleSignup = () => {
-    // 비밀번호와 비밀번호 확인이 일치하는지 검사
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
+    // 1단계 확인
+    console.log("1. 회원가입 버튼이 정상적으로 눌렸습니다!");
+
     if (pw !== passwordConfirm) {
-      alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요.");
+      console.log("2. 실패: 비밀번호 불일치");
+      alert("비밀번호가 서로 다릅니다!"); // 눈에 보이게 alert 띄우기
       return;
-      // 일치하지 않으면 아래 코드가 실행되지 않고 함수 종료
     }
 
     if (!id || !pw || !passwordConfirm || !userName) {
-      alert("모든 항목을 입력해주세요.");
+      console.log("2. 실패: 빈칸 있음");
+      alert("빈칸이 있습니다. 모두 채워주세요!"); // 눈에 보이게 alert 띄우기
       return;
     }
 
-    // 모든 조건이 맞으면 가입 성공 알림 후 로그인 페이지로 이동
-    alert("회원가입이 완료되었습니다! 로그인해주세요.");
-    navigate("/login");
-  };
+    // 2단계 확인
+    console.log("3. 검사 통과! 서버로 데이터 전송을 시작합니다.");
+    setIsLoading(true);
 
+    try {
+      const response = await api.post("/accounts/signup/", {
+        username: id,
+        password: pw,
+        // ⚠️ 서버에서 요구하는 필드명(key)이 다를 경우 이 부분을 수정해야 합니다.
+        // 예: 백엔드가 nickname을 원한다면 nickname: userName,
+      });
+
+      console.log("4. 회원가입 성공:", response.data);
+      alert("회원가입 성공! 로그인 화면으로 이동합니다.");
+      navigate("/login");
+    } catch (error) {
+      console.error("4. 에러 발생:", error);
+
+      // 구체적인 에러 메시지를 alert로 띄워줍니다.
+      const errorMessage = error.response?.data
+        ? JSON.stringify(error.response.data)
+        : "알 수 없는 에러";
+      alert(`회원가입 실패: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="font-sf flex min-h-screen flex-col items-center bg-white px-8 pt-20 pb-20">
       <header className="mb-16 text-center">

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
 import GNB from "../../Components/GNB";
 
-import useToastStore from "../../store/useToastStore";
+import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
 function MyPagePosts() {
@@ -11,52 +12,39 @@ function MyPagePosts() {
   const showToast = useToastStore((state) => state.showToast);
   const openModal = useModalStore((state) => state.openModal);
 
-  // mock data
-  const initialPosts = [
-    {
-      id: 1,
-      author: "김이화",
-      title: "Waffle It Up",
-      content: "2교시 끝나고 와플잇업에서 배달시키실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 중",
-      matchRate: "80%",
-      price: "14,000",
-    },
-    {
-      id: 2,
-      author: "김이화",
-      title: "카페인중독",
-      content: "햅쌀와플 진짜 맛있는데 함께 시켜드실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 완료",
-      matchRate: "100%",
-      price: "14,000",
-    },
-    {
-      id: 3,
-      author: "김이화",
-      title: "Waffle It Up",
-      content: "2교시 끝나고 와플잇업에서 배달시키실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 완료",
-      matchRate: "100%",
-      price: "14,000",
-    },
-    {
-      id: 4,
-      author: "김이화",
-      title: "Waffle It Up",
-      content: "2교시 끝나고 와플잇업에서 배달시키실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 완료",
-      matchRate: "100%",
-      price: "14,000",
-    },
-  ];
-
   // 상태 관리
-  const [posts, setPosts] = useState(initialPosts); // 게시글 목록 상태
+  const [posts, setPosts] = useState([]); // 게시글 목록 상태
+
+  // 게시글 목록 데이터 가져오기 (GET)
+  const fetchPosts = async () => {
+    try {
+      const response = await api.get("/posts/");
+
+      console.log("👀 백엔드가 보내준 게시글 목록:", response.data);
+
+      // 백엔드 데이터 + 가상 데이터 (백엔드 구현X)
+      const formattedPosts = response.data.map((post) => ({
+        id: post.id,
+        author: "김이화", // API에 없는 가상 고정값
+        title: post.title,
+        content: post.body,
+        keywords: [post.category || "없음", post.location || "없음"], // 태그 비어있을 시 고정값 '없음'
+        status: "매칭 중", // 고정값
+        matchRate: "80%", // 고정값
+        price: "14,000", // 고정값
+        rawPost: post, // EditPage로 백엔드 데이터를 그대로 넘겨주기 위해 보관
+      }));
+
+      setPosts(formattedPosts);
+    } catch (error) {
+      console.error("내가 쓴 글 목록 조회 실패:", error);
+      showToast("글 목록을 불러오는 데 실패했습니다.");
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
   // 삭제하기 버튼을 눌렀을 때
   const handleDeleteClick = (post) => {
@@ -71,13 +59,18 @@ function MyPagePosts() {
       showImage: false,
       acceptText: "삭제",
       rejectText: "취소",
-      onAccept: () => {
-        // '삭제' 버튼을 눌렀을 때
-        const updatedPosts = posts.filter((p) => p.id !== post.id);
-        setPosts(updatedPosts);
+      onAccept: async () => {
+        // 서버에 삭제 요청 보내기 (DELETE)
+        try {
+          await api.delete(`/posts/${post.id}/`);
 
-        // 토스트 띄우기
-        showToast("삭제되었습니다.");
+          // 성공 시 상태 업데이트 및 토스트 출력
+          setPosts((prev) => prev.filter((p) => p.id !== post.id));
+          showToast("삭제되었습니다.");
+        } catch (error) {
+          console.error("게시글 삭제 실패:", error);
+          showToast("게시글 삭제에 실패했습니다.");
+        }
       },
     });
   };
@@ -101,89 +94,98 @@ function MyPagePosts() {
 
       <main className="px-6">
         {/* 게시글 리스트 렌더링 */}
-        {posts.map((post) => {
-          const statusIcon =
-            post.status === "매칭 중"
-              ? "/icons/Matching.svg"
-              : "/icons/MatchComplete.svg";
+        {posts.length > 0 ? (
+          posts.map((post) => {
+            const statusIcon =
+              post.status === "매칭 중"
+                ? "/icons/Matching.svg"
+                : "/icons/MatchComplete.svg";
 
-          return (
-            <article
-              key={post.id}
-              className="border-gray-2 flex justify-between border-b py-6"
-            >
-              {/* 텍스트 정보 영역 */}
-              <div className="flex flex-1 flex-col pr-4">
-                {/* 프로필 이미지와 이름 */}
-                <div className="flex items-center gap-3">
-                  <div>
-                    <img
-                      src="/images/CharacterProfile.png"
-                      alt="프로필"
-                      className="h-13 w-13 object-contain"
-                    />
+            return (
+              <article
+                key={post.id}
+                className="border-gray-2 flex justify-between border-b py-6"
+              >
+                {/* 텍스트 정보 영역 */}
+                <div className="flex flex-1 flex-col pr-4">
+                  {/* 프로필 이미지와 이름 */}
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <img
+                        src="/images/CharacterProfile.png"
+                        alt="프로필"
+                        className="h-13 w-13 object-contain"
+                      />
+                    </div>
+                    <span className="text-lg font-bold text-black">
+                      {post.author}
+                    </span>
                   </div>
-                  <span className="text-lg font-bold text-black">
-                    {post.author}
-                  </span>
+
+                  {/* 제목과 본문 */}
+                  <h4 className="mt-4 text-xl font-bold text-black">
+                    {post.title}
+                  </h4>
+                  <p className="text-gray-4 mt-1 truncate text-xs">
+                    {post.content}
+                  </p>
+
+                  {/* 키워드 */}
+                  <div className="text-blue-main mt-3 flex gap-3 text-sm font-medium">
+                    {post.keywords.map((keyword, index) => (
+                      <span key={index}>{keyword}</span>
+                    ))}
+                  </div>
+
+                  {/* 매칭 상태 정보 */}
+                  <div className="text-gray-4 mt-3 flex items-center gap-4 text-[11px] font-medium">
+                    <img
+                      src={statusIcon}
+                      alt={post.status}
+                      className="h-3 object-contain"
+                    />
+                    <span>{post.matchRate}</span>
+                    <span>{post.price}</span>
+                  </div>
+
+                  {/* 수정하기 / 삭제하기 버튼 */}
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() =>
+                        // 수정 페이지로 백엔드 데이터 전달
+                        navigate("/mypage/edit", {
+                          state: { post: post.rawPost },
+                        })
+                      }
+                      className="text-blue-main bg-blue-bg rounded-full px-5 py-1.5 text-[13px] font-bold shadow-sm transition-transform hover:scale-[1.02] hover:cursor-pointer"
+                    >
+                      수정하기
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(post)}
+                      className="bg-gray-3 rounded-full px-5 py-1.5 text-[13px] font-bold text-gray-600 shadow-sm transition-transform hover:scale-[1.02] hover:cursor-pointer"
+                    >
+                      삭제하기
+                    </button>
+                  </div>
                 </div>
 
-                {/* 제목과 본문 */}
-                <h4 className="mt-4 text-xl font-bold text-black">
-                  {post.title}
-                </h4>
-                <p className="text-gray-4 mt-1 truncate text-xs">
-                  {post.content}
-                </p>
-
-                {/* 키워드 */}
-                <div className="text-blue-main mt-3 flex gap-3 text-sm font-medium">
-                  {post.keywords.map((keyword, index) => (
-                    <span key={index}>{keyword}</span>
-                  ))}
-                </div>
-
-                {/* 매칭 상태 정보 */}
-                <div className="text-gray-4 mt-3 flex items-center gap-4 text-[11px] font-medium">
+                {/* 식당 사진 영역 */}
+                <div className="bg-gray-2 h-35 w-30 shrink-0 overflow-hidden rounded-lg">
                   <img
-                    src={statusIcon}
-                    alt={post.status}
-                    className="h-3 object-contain"
+                    src="/images/FoodPhoto.png"
+                    alt="식당 사진"
+                    className="h-full w-full object-cover"
                   />
-                  <span>{post.matchRate}</span>
-                  <span>{post.price}</span>
                 </div>
-
-                {/* 수정하기 / 삭제하기 버튼 */}
-                <div className="mt-4 flex gap-3">
-                  <button
-                    onClick={() =>
-                      navigate("/mypage/edit", { state: { post } })
-                    }
-                    className="text-blue-main bg-blue-bg rounded-full px-5 py-1.5 text-[13px] font-bold shadow-sm transition-transform hover:scale-[1.02] hover:cursor-pointer"
-                  >
-                    수정하기
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(post)}
-                    className="bg-gray-3 rounded-full px-5 py-1.5 text-[13px] font-bold text-gray-600 shadow-sm transition-transform hover:scale-[1.02] hover:cursor-pointer"
-                  >
-                    삭제하기
-                  </button>
-                </div>
-              </div>
-
-              {/* 식당 사진 영역 */}
-              <div className="bg-gray-2 h-35 w-30 shrink-0 overflow-hidden rounded-lg">
-                <img
-                  src="/images/FoodPhoto.png"
-                  alt="식당 사진"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })
+        ) : (
+          <div className="text-gray-4 py-20 text-center font-medium">
+            작성한 게시글이 없습니다.
+          </div>
+        )}
       </main>
 
       <GNB />

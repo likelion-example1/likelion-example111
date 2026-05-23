@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 
-import useToastStore from "../../store/useToastStore";
+import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
 function ChatRoomPage() {

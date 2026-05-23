@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 // 전역 상태
-import useAuthStore from "../store/useAuthStore";
-import useToastStore from "../store/useToastStore";
+import useAuthStore from "../store/useAuthStore.js";
+import useToastStore from "../store/useToastStore.js";
+// API 연동
+import api from "../api.js";
 
 function LoginPage() {
   // 사용자가 입력할 ID와 비밀번호를 저장할 상태 입력
@@ -18,7 +20,7 @@ function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const showToast = useToastStore((state) => state.showToast);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault(); // 폼 제출 시 새로고침 방지
 
     // ID나 패스워드 중 하나라도 비어있으면 토스트 띄우기
@@ -30,14 +32,33 @@ function LoginPage() {
     setIsLoading(true); // 실제 서버에서 정보 가져올 때 로딩 창 띄움
 
     try {
-      // 실제 서버와 통신할 때는 API 호출하는 코드 작성해야!! (추후 수정)
+      // 백엔드 서버로 로그인 요청 (POST)
+      const response = await api.post("/accounts/login/", {
+        username: id,
+        password: pw,
+      });
 
-      // 전역 상태 업데이트
-      login({ id: id });
+      console.log("로그인 상태", response.data);
+
+      const receivedToken = response.data.token || response.data.access;
+
+      // 로그인 성공 시 유저 정보와 토큰 스토어에 저장
+      login({ id: id }, receivedToken);
+
+      // 로그인 성공 시 전역 상태 업데이트 및 홈으로 이동
       showToast(`${id}님 환영합니다!`);
       navigate("/");
     } catch (error) {
-      showToast("로그인에 실패했습니다.");
+      console.error("로그인 실패", error);
+
+      // 서버에서 보내준 에러 메시지가 있다면 띄워주고, 없다면 기본 메시지 출력
+      const errorMessage = error.response?.data?.message || (
+        <p>
+          로그인에 실패했습니다. <br />
+          아이디와 비밀번호를 확인해주세요.
+        </p>
+      );
+      showToast(errorMessage);
     } finally {
       setIsLoading(false);
     }
