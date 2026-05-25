@@ -20,12 +20,12 @@ function MyPagePosts() {
     try {
       const response = await api.get("/posts/");
 
-      console.log("👀 백엔드가 보내준 게시글 목록:", response.data);
+      console.log("백엔드가 보내준 게시글 목록:", response.data);
 
       // 백엔드 데이터 + 가상 데이터 (백엔드 구현X)
       const formattedPosts = response.data.map((post) => ({
         id: post.id,
-        author: "김이화", // API에 없는 가상 고정값
+        author: post.nickname || "익명", // 백엔드에서 닉네임이 안 오면 '익명'으로 표시
         title: post.title,
         content: post.body,
         keywords: [post.category || "없음", post.location || "없음"], // 태그 비어있을 시 고정값 '없음'

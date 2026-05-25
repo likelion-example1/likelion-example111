@@ -1,16 +1,37 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
 import GNB from "../../Components/GNB";
 import MatchCount from "../../Components/MatchCountBar";
 
 function MyPageMain() {
   const navigate = useNavigate();
 
-  // mock 데이터
-  const user = {
-    name: "김이화",
-    id: "kimewha",
-    matchCount: 3,
-  };
+  // 프로필 상태 관리 (기본 고정값)
+  const [user, setUser] = useState({
+    name: "",
+    matchCount: 3, // API 구현 전까지는 일단 3회로 고정. 추후 수정.
+  });
+
+  // 컴포넌트가 열릴 때 프로필 데이터 가져오기 (GET)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await api.get("/accounts/profile/");
+        console.log("백엔드가 보내준 프로필 데이터:", response.data);
+
+        setUser((prev) => ({
+          ...prev,
+          // 백엔드에서 준 nickname 혹은 name이 있으면 그걸 쓰고, 없으면 공백 처리
+          name: response.data.nickname || response.data.name || "",
+        }));
+      } catch (error) {
+        console.error("마이페이지 프로필 조회 실패:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   return (
     <div className="font-sf relative min-h-screen bg-white px-6 pt-10 pb-28">
@@ -26,7 +47,7 @@ function MyPageMain() {
         <section>
           {/* 프로필 이름 및 프로필 사진(캐릭터) */}
           <h2 className="text-blue-main text-center text-4xl font-bold">
-            김이화
+            {user.name}
           </h2>
           <div className="mb-8 flex justify-center">
             <img

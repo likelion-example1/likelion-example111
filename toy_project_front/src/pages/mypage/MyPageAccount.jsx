@@ -34,12 +34,12 @@ function MyPageAccount() {
         const response = await api.get("/accounts/profile/");
         console.log("백엔드가 보내준 프로필 데이터:", response.data);
 
-        // 백엔드에서 받은 데이터로 업데이트 (없으면 로딩중...)
+        // 백엔드에서 받은 데이터로 업데이트
         setUser({
           // 백엔드의 'username' 필드를 프론트의 'ID' 자리에
-          loginId: response.data.username || "로딩중...",
+          loginId: response.data.username || "",
           // 백엔드의 'nickname' 필드를 '닉네임' 자리에
-          nickname: response.data.nickname || response.data.name || "로딩중...",
+          nickname: response.data.nickname || response.data.name || "",
         });
       } catch (error) {
         console.error("프로필 정보 조회 실패:", error);

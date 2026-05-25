@@ -48,6 +48,7 @@ const TimelineCard = ({ post, isMyPost }) => {
           const errorMsg =
             error.response?.data?.message ||
             error.response?.data?.detail ||
+            error.response?.data?.error ||
             "매칭 신청에 실패했습니다.";
           showToast(errorMsg);
         }
