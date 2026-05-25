@@ -30,22 +30,22 @@ function SignupPage() {
     e.preventDefault();
 
     // 1단계 확인
-    console.log("1. 회원가입 버튼이 정상적으로 눌렸습니다!");
+    console.log("회원가입 버튼이 정상적으로 눌렸습니다!");
 
     if (pw !== passwordConfirm) {
-      console.log("2. 실패: 비밀번호 불일치");
+      console.log("실패: 비밀번호 불일치");
       showToast("비밀번호가 서로 다릅니다!");
       return;
     }
 
     if (!id || !pw || !passwordConfirm || !userName) {
-      console.log("2. 실패: 빈칸 있음");
+      console.log("실패: 빈칸 있음");
       showToast("빈칸이 있습니다. 모두 채워주세요!");
       return;
     }
 
     // 2단계 확인
-    console.log("3. 검사 통과! 서버로 데이터 전송을 시작합니다.");
+    console.log("검사 통과! 서버로 데이터 전송을 시작합니다.");
     setIsLoading(true);
 
     try {
@@ -54,11 +54,11 @@ function SignupPage() {
         password: pw,
       });
 
-      console.log("4. 회원가입 성공:", response.data);
+      console.log("회원가입 성공:", response.data);
       showToast("회원가입 성공! 로그인 화면으로 이동합니다.");
       navigate("/login");
     } catch (error) {
-      console.error("4. 에러 발생:", error);
+      console.error("에러 발생:", error);
 
       const errorMessage = error.response?.data
         ? JSON.stringify(error.response.data)
