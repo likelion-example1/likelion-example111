@@ -26,7 +26,14 @@ function HomePage() {
         console.log("게시글 목록 불러오기 성공:", response.data);
 
         // 서버에서 받아온 진짜 데이터를 상태에 저장
-        setPosts(response.data);
+        // 응답이 배열이 아닐 수 있으므로 안전하게 배열로 정규화
+        if (Array.isArray(response.data)) {
+          setPosts(response.data);
+        } else if (response.data && Array.isArray(response.data.posts)) {
+          setPosts(response.data.posts);
+        } else {
+          setPosts([]);
+        }
       } catch (error) {
         console.error("게시글 목록 불러오기 실패:", error);
       }
@@ -62,15 +69,18 @@ function HomePage() {
   const searchKeywords = location.state?.searchKeywords || [];
 
   // 필터링! 선택된 키워드가 있다면, 해당 키워드를 모두 포함하는 게시글만 걸러내기
+  // posts가 배열이 아닐 수 있으므로 안전하게 처리
+  const safePosts = Array.isArray(posts) ? posts : [];
+
   const filteredPosts =
     searchKeywords.length > 0
-      ? posts.filter((post) => {
+      ? safePosts.filter((post) => {
           // 백엔드에서 주는 데이터(수령 장소, 카테고리, 상태)를 하나의 배열로 묶음
           const postTags = [post.location, post.category, post.status];
           // 사용자가 선택한 검색 키워드가 postTags 안에 모두 포함되어 있는지 확인
           return searchKeywords.every((keyword) => postTags.includes(keyword));
         })
-      : posts;
+      : safePosts;
 
   return (
     <div className="font-sf px-8 pb-24">
