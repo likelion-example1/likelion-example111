@@ -1,12 +1,15 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import api from "../api.js";
 import GNB from "../Components/GNB";
 
 import Input from "../Components/Input";
 import TextArea from "../Components/TextArea";
 import Button from "../Components/Button";
+import useToastStore from "../store/useToastStore";
 
 function WritePage() {
+  const showToast = useToastStore((state) => state.showToast);
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef(null);
@@ -17,16 +20,31 @@ function WritePage() {
   const [deliveryFee, setDeliveryFee] = useState("");
 
   // 키워드는 여러 개 선택할 수 있으므로 배열([])로 상태 만들기
-  const [selectedLocations, setSelectedLocations] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  // 260521, 백엔드 명세에서는 다중 선택이 아니고 단일선택이라 코드 변경. 추후 다중 선택이 맞으면 코드 원상복귀 예정
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
 
-  // mock 키워드
-  // 화면에 보여줄 가상의 키워드 목록
-  const locationOptions = ["정문", "후문", "기숙사", "도서관", "ECC", "기타"];
-  const categoryOptions = ["한식", "중식", "일식", "양식", "분식", "카페"];
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 현재 사용자의 고유 ID
-  const currentUserId = 101;
+  // 백엔드 models.py에 정의된 choices와 똑같이 맞춘 태그 목록
+  const locationOptions = [
+    "ECC",
+    "조형대",
+    "공대",
+    "연협",
+    "학관",
+    "학문관",
+    "중앙도서관",
+  ];
+  const categoryOptions = [
+    "한식",
+    "중식",
+    "일식",
+    "양식",
+    "분식",
+    "샐러드",
+    "디저트_음료",
+  ];
 
   // 사진 업로드 시
   const handleImageClick = () => {
@@ -37,62 +55,57 @@ function WritePage() {
     const file = e.target.files[0];
     if (file) {
       alert(`${file.name} 사진이 첨부되었습니다!`);
+      // ★★★★★★실제로 이미지 서버로 전송하려면 추가 코드 작성 필요
     }
   };
 
-  // 수령 장소 키워드 클릭 (토글 기능)
-  const toggleLocation = (location) => {
-    if (selectedLocations.includes(location)) {
-      // 이미 선택된 거라면 배열에서 뺌
-      setSelectedLocations(
-        selectedLocations.filter((item) => item !== location),
-      );
-    } else {
-      // 선택 안 된 거라면 배열에 추가
-      setSelectedLocations([...selectedLocations, location]);
-    }
+  // 260521 마찬가지로 토글 기능 삭제하고 다중 선택에서 단일 선택으로 변경
+  // 수령 장소 선택
+  const handleLocationSelect = (location) => {
+    // 이미 선택된 것을 누르면 취소되게 하고, 아니면 새 항목으로 교체
+    setSelectedLocation(selectedLocation === location ? "" : location);
   };
 
-  // 메뉴 카테고리 키워드 클릭 (토글 기능)
-  const toggleCategory = (category) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(
-        selectedCategories.filter((item) => item !== category),
-      );
-    } else {
-      setSelectedCategories([...selectedCategories, category]);
-    }
+  // 메뉴 카테고리 선택
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(selectedCategory === category ? "" : category);
   };
 
   // 완료 버튼 클릭 (제출)
-  const handleSubmit = () => {
-    if (!title || !description) {
-      alert("제목과 설명을 입력해주세요.");
+  const handleSubmit = async () => {
+    if (!title || !description || !selectedLocation || !selectedCategory) {
+      showToast("제목과 설명, 수령 장소, 카테고리를 모두 입력해주세요.");
       return;
     }
-    // 홈 화면으로 보낼 '새 글' 데이터 객체
-    const newPostData = {
-      id: Date.now(),
-      restaurantName: title,
-      image: "/images/FoodPhoto.png",
-      authorId: currentUserId,
-      authorName: "김이화",
-      lastMessage: "아직 대화가 없습니다.",
-      participants: [1],
-      currentAmount: "0",
-      targetAmount: minPrice || "14,000",
-      timeAgo: "방금 전",
-      keywords: [...selectedCategories, ...selectedLocations],
-    };
+    setIsLoading(true);
 
-    // 홈으로 이동하면서 정보 전달
-    navigate("/", {
-      state: {
-        showToast: true,
-        message: "업로드 되었습니다!",
-        newPost: newPostData,
-      },
-    });
+    try {
+      // 백엔드 서버로 데이터 전송 (POST)
+      const response = await api.post("/posts/", {
+        title: title,
+        body: description,
+        location: selectedLocation,
+        category: selectedCategory,
+        language: 1, // 1: KOR
+        // 금액 데이터(minPrice, deliveryFee)는 현재 서버에 명시되어 있지 않으므로 전송하지 않음. 추후수정!
+      });
+
+      console.log("글 작성 성공:", response.data);
+
+      // 성공 시 홈으로 이동하며 상태값 전달
+      navigate("/", {
+        state: {
+          showToast: true,
+          message: "업로드 되었습니다!",
+          newPost: response.data, // 서버가 방금 만든 진짜 데이터 객체를 홈으로 넘겨줌
+        },
+      });
+    } catch (error) {
+      console.error("글 작성 실패:", error);
+      showToast("글 작성에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <div className="font-sf min-h-screen bg-white pb-20">
@@ -122,7 +135,10 @@ function WritePage() {
           </div>
 
           {/* 완료 버튼 */}
-          <Button onClick={handleSubmit} className="mb-12 px-8 py-2">
+          <Button
+            onClick={handleSubmit}
+            className="mb-12 transform cursor-pointer px-8 py-2 hover:scale-105"
+          >
             완료
           </Button>
 
@@ -197,17 +213,18 @@ function WritePage() {
         <section className="mb-8">
           <h4 className="text-blue-main mb-3 text-base font-bold">수령 장소</h4>
           <div className="flex flex-wrap gap-2">
-            {locationOptions.map((location) => (
+            {locationOptions.map((loc) => (
               <button
-                key={location}
-                onClick={() => toggleLocation(location)}
+                key={loc}
+                type="button"
+                onClick={() => handleLocationSelect(loc)}
                 className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
-                  selectedLocations.includes(location)
+                  selectedLocation === loc
                     ? "bg-blue-main text-white shadow-md"
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
               >
-                {location}
+                {loc}
               </button>
             ))}
           </div>
@@ -222,14 +239,15 @@ function WritePage() {
             {categoryOptions.map((category) => (
               <button
                 key={category}
-                onClick={() => toggleCategory(category)}
+                onClick={() => handleCategorySelect(category)}
                 className={`rounded-full px-5 py-2 text-sm font-bold transition-all ${
-                  selectedCategories.includes(category)
+                  selectedCategory === category
                     ? "bg-blue-main text-white shadow-md"
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
               >
-                {category}
+                {/* 백엔드 내 디저트_음료를 디저트 및 음료로 변경*/}
+                {category === "디저트_음료" ? "디저트 및 음료" : category}
               </button>
             ))}
           </div>

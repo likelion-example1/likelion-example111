@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom"; // 페이지 이동을 위한 훅
 import GNB from "../Components/GNB"; // GNB 컴포넌트 불러오기
 import TimelineCard from "../Components/TimelineCard";
-import useToastStore from "../store/useToastStore";
+import useToastStore from "../store/useToastStore.js";
+import api from "../api.js"; // API 함수 불러오기
 
 function HomePage() {
   const navigate = useNavigate();
@@ -13,56 +14,26 @@ function HomePage() {
 
   // useState 훅: 서버에서 받아올 가상의 게시글 목록 상태
   // 나중에 게시글이 여러 개로 늘어날 때 map 함수를 사용할 것 (260505_적용함!)
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      restaurantName: "영미김밥",
-      image: "/images/FoodPhoto.png",
-      // 가상의 다른 작성자 ID
-      authorId: 202,
-      lastMessage: "저는 다 담았습니다!",
-      participants: [1, 2, 3], // 참여자 수는 배열로 작성
-      currentAmount: "8,700",
-      targetAmount: "14,000",
-      timeAgo: "방금 전",
-      keywords: ["한식", "분식"],
-    },
-    {
-      id: 2,
-      restaurantName: "영천닭강정",
-      image: "/images/FoodPhoto.png",
-      authorId: 303,
-      lastMessage: "간장맛이요!!",
-      participants: [1, 2, 3],
-      currentAmount: "16,900",
-      targetAmount: "8,000",
-      timeAgo: "2분 전",
-      keywords: ["한식", "포스코관"],
-    },
-    {
-      id: 3,
-      restaurantName: "피자초이",
-      image: "/images/FoodPhoto.png",
-      authorId: 404,
-      lastMessage: "어떤 맛이 제일 맛있나요..?",
-      participants: [1, 2, 3],
-      keywords: ["양식", "조형대"],
-      currentAmount: "8,700",
-      targetAmount: "14,000",
-    },
-    {
-      id: 4,
-      restaurantName: "오토김밥",
-      image: "/images/FoodPhoto.png",
-      authorId: 404,
-      lastMessage: "이번 수업 끝나면 시키겠습니다!",
-      participants: [1, 2, 3],
-      currentAmount: "8,700",
-      targetAmount: "14,000",
-      timeAgo: "11분 전",
-      keywords: ["샐러드", "조형대"],
-    },
-  ]);
+  // 260519 가상의 게시물 삭제함
+  const [posts, setPosts] = useState([]);
+
+  // 페이지가 렌더링될 때 서버에서 데이터를 불러오는 useEffect
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        // GET /posts/ 로 전체 게시글 요청
+        const response = await api.get("/posts/");
+        console.log("게시글 목록 불러오기 성공:", response.data);
+
+        // 서버에서 받아온 진짜 데이터를 상태에 저장
+        setPosts(response.data);
+      } catch (error) {
+        console.error("게시글 목록 불러오기 실패:", error);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   useEffect(() => {
     // WritePage에서 넘어온 데이터가 있는지 확인
@@ -93,9 +64,12 @@ function HomePage() {
   // 필터링! 선택된 키워드가 있다면, 해당 키워드를 모두 포함하는 게시글만 걸러내기
   const filteredPosts =
     searchKeywords.length > 0
-      ? posts.filter((post) =>
-          searchKeywords.every((keyword) => post.keywords?.includes(keyword)),
-        )
+      ? posts.filter((post) => {
+          // 백엔드에서 주는 데이터(수령 장소, 카테고리, 상태)를 하나의 배열로 묶음
+          const postTags = [post.location, post.category, post.status];
+          // 사용자가 선택한 검색 키워드가 postTags 안에 모두 포함되어 있는지 확인
+          return searchKeywords.every((keyword) => postTags.includes(keyword));
+        })
       : posts;
 
   return (
@@ -151,14 +125,15 @@ function HomePage() {
           {/* 전체 posts가 아니라 걸러진 filteredPosts를 보여줌 */}
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
-              const isMyPost = post.authorId === currentUserId;
+              // authorId 대신 백엔드 명세인 host 사용!
+              const isMyPost = post.host === currentUserId;
               return (
                 <TimelineCard key={post.id} post={post} isMyPost={isMyPost} />
               );
             })
           ) : (
             <div className="text-gray-3 py-10 text-center">
-              해당 키워드의 게시글이 없습니다.
+              게시글이 없습니다.
             </div>
           )}
         </section>

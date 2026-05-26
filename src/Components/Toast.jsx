@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import useToastStore from "../store/useToastStore"; // 스토어 불러오기
+import useToastStore from "../store/useToastStore.js"; // 스토어 불러오기
 
 const Toast = () => {
   // 전역 상태에서 필요한 값과 함수 가져오기
@@ -20,7 +20,7 @@ const Toast = () => {
   return (
     <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 transition-all">
       <div className="rounded-xl bg-white/90 px-8 py-3 shadow-lg backdrop-blur-sm">
-        <p className="text-blue-bg text-4 font-bold">{message}</p>
+        <p className="text-blue-bg text-4 text-center font-bold">{message}</p>
       </div>
     </div>
   );

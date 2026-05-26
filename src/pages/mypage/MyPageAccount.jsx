@@ -1,8 +1,9 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
 import GNB from "../../Components/GNB";
 
-import useToastStore from "../../store/useToastStore";
+import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
 function MyPageAccount() {
@@ -14,12 +15,38 @@ function MyPageAccount() {
   // 파일 업로드 input을 조작하기 위한 hook
   const fileInputRef = useRef(null);
 
-  // 사진과 동일하게 가상 데이터 업데이트
-  const user = {
-    name: "김이화",
-    id: "ewhakim",
-    currentPw: "eorudkffjwk123",
-  };
+  // 상태 관리
+  // 프로필 정보
+  const [user, setUser] = useState({
+    loginId: "",
+    nickname: "",
+  });
+
+  // 비밀번호 입력 상태
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // 계정 정보 불러오기 (GET)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await api.get("/accounts/profile/");
+        console.log("백엔드가 보내준 프로필 데이터:", response.data);
+
+        // 백엔드에서 받은 데이터로 업데이트
+        setUser({
+          // 백엔드의 'username' 필드를 프론트의 'ID' 자리에
+          loginId: response.data.username || "",
+          // 백엔드의 'nickname' 필드를 '닉네임' 자리에
+          nickname: response.data.nickname || response.data.name || "",
+        });
+      } catch (error) {
+        console.error("프로필 정보 조회 실패:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   // '사진 업로드' 글씨를 클릭했을 때 실행
   const handleUploadClick = () => {
@@ -31,13 +58,38 @@ function MyPageAccount() {
     const file = event.target.files[0];
     if (file) {
       showToast(`${file.name} 사진이 선택되었습니다.`);
+      // 추후 프로필 사진 변경 API 연동
     }
   };
 
-  // 완료 버튼 클릭 시 실행
-  const handleComplete = () => {
-    showToast("정보가 수정되었습니다.");
-    navigate("/mypage");
+  // 완료(비밀번호 변경) 버튼 클릭 (PUT)
+  const handleComplete = async () => {
+    // 유효성 검사
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      showToast("모든 비밀번호 항목을 입력해주세요.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    try {
+      // 비밀번호 변경 API 요청
+      await api.post("/accounts/password-change/", {
+        old_password: oldPassword,
+        new_password: newPassword,
+      });
+
+      showToast("비밀번호가 성공적으로 변경되었습니다.");
+      navigate("/mypage");
+    } catch (error) {
+      console.error("비밀번호 변경 실패:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        "비밀번호 변경에 실패했습니다. 8자 이상, 영문, 숫자, 특수문자를 혼합했는지 확인해주세요.";
+      showToast(errorMsg);
+    }
   };
 
   // 취소 버튼 클릭 시 실행될 모달 호출 함수
@@ -110,7 +162,7 @@ function MyPageAccount() {
               <span className="text-[16px] font-bold text-black">|</span>
             </div>
             <span className="text-[15px] font-medium text-gray-500">
-              {user.id}
+              {user.loginId}
             </span>
           </div>
 
@@ -121,7 +173,7 @@ function MyPageAccount() {
               <span className="text-[16px] font-bold text-black">|</span>
             </div>
             <span className="text-[15px] font-medium text-gray-500">
-              {user.name}
+              {user.nickname}
             </span>
           </div>
 
@@ -133,9 +185,13 @@ function MyPageAccount() {
               </span>
               <span className="text-base font-bold text-black">|</span>
             </div>
-            <span className="text-[15px] font-medium text-gray-500">
-              {user.currentPw}
-            </span>
+            <input
+              type="password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              placeholder="현재 비밀번호를 입력해주세요."
+              className="w-full bg-transparent text-[14px] font-medium text-gray-500 outline-none placeholder:text-gray-400"
+            />
           </div>
 
           {/* 비밀번호 변경 1 */}
@@ -148,6 +204,8 @@ function MyPageAccount() {
             </div>
             <input
               type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
               placeholder="변경을 원하시는 비밀번호를 입력해주세요."
               className="w-full bg-transparent text-[14px] font-medium text-gray-500 outline-none placeholder:text-gray-400"
             />
@@ -163,6 +221,8 @@ function MyPageAccount() {
             </div>
             <input
               type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="비밀번호를 한 번 더 입력해주세요."
               className="w-full bg-transparent text-[14px] font-medium text-gray-500 outline-none placeholder:text-gray-400"
             />

@@ -22,6 +22,7 @@ export function MyPageHistory() {
       matchRate: "80%",
       price: "14,000",
     },
+
     {
       id: 2,
       type: "received",
@@ -33,6 +34,7 @@ export function MyPageHistory() {
       matchRate: "80%",
       price: "14,000",
     },
+
     {
       id: 3,
       type: "received",
@@ -67,6 +69,7 @@ export function MyPageHistory() {
         <button onClick={() => navigate(-1)} className="cursor-pointer p-1">
           <img src="/icons/back.svg" alt="뒤로가기" className="h-5 w-5" />
         </button>
+
         <h1 className="text-xl font-bold text-black">나의 매칭내역</h1>
       </header>
 
@@ -82,6 +85,7 @@ export function MyPageHistory() {
           >
             내가 받은
           </button>
+
           <button
             onClick={() => setActiveTab("sent")}
             className={`rounded-xl px-5 py-2.5 text-sm font-bold shadow-sm transition-colors ${
@@ -96,18 +100,21 @@ export function MyPageHistory() {
 
         <section className="px-6">
           {/* 필터링된 매칭 내역 리스트 */}
+
           {filteredData.length > 0 ? (
             filteredData.map((post) => (
               <HistoryCard key={post.id} post={post} />
             ))
           ) : (
             // 데이터가 없을 때 보여줄 화면 처리
+
             <div className="text-gray-4 py-16 text-center font-medium">
               매칭 내역이 없습니다.
             </div>
           )}
         </section>
       </main>
+
       <GNB />
     </div>
   );

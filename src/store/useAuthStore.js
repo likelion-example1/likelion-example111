@@ -7,13 +7,14 @@ const useAuthStore = create(
       // persist가 알아서 localStorage 값을 읽어옴
       isLoggedIn: false,
       user: null,
+      token: null,
 
-      login: (userData) => {
-        set({ isLoggedIn: true, user: userData });
+      login: (userData, token) => {
+        set({ isLoggedIn: true, user: userData, token: token });
       },
 
       logout: () => {
-        set({ isLoggedIn: false, user: null });
+        set({ isLoggedIn: false, user: null, token: null });
       },
     }),
     {

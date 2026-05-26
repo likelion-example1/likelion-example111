@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import useAuthStore from "./store/useAuthStore";
-import useToastStore from "./store/useToastStore";
+import useToastStore from "./store/useToastStore.js";
 
 // 전역 상태 관리
 import Toast from "./Components/Toast";
