@@ -31,6 +31,7 @@ jobs:
         run: |
           vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > vercel-output.txt
           echo "preview_url=$(cat vercel-output.txt)" >> $GITHUB_OUTPUT
+        working-directory: ./toy-project
 
       - name: Comment PR with Preview URL
         uses: thollander/actions-comment-pull-request@v2
