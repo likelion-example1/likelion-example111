@@ -22,8 +22,8 @@ function MyPageMain() {
 
         setUser((prev) => ({
           ...prev,
-          // 백엔드에서 준 nickname 혹은 name이 있으면 그걸 쓰고, 없으면 공백 처리
-          name: response.data.nickname || response.data.name || "",
+          // 백엔드에서 준 username 띄우거나 없으면 공백 처리
+          name: response.data.username || "",
         }));
       } catch (error) {
         console.error("마이페이지 프로필 조회 실패:", error);

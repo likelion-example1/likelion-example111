@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-
+import api from "../../api.js";
 import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
@@ -17,69 +17,44 @@ function ChatRoomPage() {
   // 채팅 입력창 상태
   const [inputValue, setInputValue] = useState("");
 
-  // 주고받은 채팅 메시지 목록 상태 (isMine이 true면 내가 보낸 것)
-  const MOCK_DB = {
-    101: {
-      title: "Waffle it up",
-      role: "receiver",
-      requests: [
-        { id: 1, name: "diadia" },
-        { id: 2, name: "깨비" },
-        { id: 3, name: "꿀꿀" },
-      ],
-      messages: [
-        {
-          id: 1,
-          sender: "율율",
-          text: "저 메뉴 골랐어요!",
-          isMine: false,
-          type: "chat",
-        },
-        {
-          id: 2,
-          sender: "왈왈",
-          text: "저는 다 담았습니다!",
-          isMine: false,
-          type: "chat",
-        },
-        { id: 3, sender: "나", text: "율율님", isMine: true, type: "chat" },
-        {
-          id: 4,
-          sender: "나",
-          text: "혹시 젤라또 맛 몇 가지로 시키실 예정이세요?",
-          isMine: true,
-          type: "chat",
-        },
-      ],
-    },
-    102: {
-      title: "Dessert 39",
-      role: "sender", // 내가 보낸 방이므로 수락 창이 뜨지 않음
-      requests: [],
-      messages: [
-        {
-          id: 1,
-          sender: "롱롱",
-          text: "기본 메시지",
-          isMine: false,
-          type: "chat",
-        }, // 이미지와 비슷한 가짜 데이터
-        {
-          id: 2,
-          sender: "tabby",
-          text: "저는 다 담았습니다!",
-          isMine: false,
-          type: "chat",
-        },
-      ],
-    },
+// 실시간 데이터 관리를 위한 상태들
+  const [roomInfo, setRoomInfo] = useState({ title: "배달 매칭방", role: "receiver" });
+  const [requests, setRequests] = useState([]);
+  const [messages, setMessages] = useState([]);
+
+  // 메시지 및 채팅방 세부 데이터 불러오기 (GET)
+  const fetchRoomData = async () => {
+    try {
+      // 대화 메시지 불러오기 API 호출
+      const response = await api.get(`/chats/${roomId}/messages/`);
+      console.log("👀 백엔드가 보내준 채팅방 상세 정보:", response.data);
+
+      // 백엔드 구조에 맞춰 안전하게 상태 분해 및 저장
+      setRoomInfo({
+        title: response.data.title || response.data.restaurantName || "배달 매칭방",
+        role: response.data.role || (response.data.is_host ? "receiver" : "sender"),
+      });
+
+      if (response.data.messages) {
+        setMessages(response.data.messages.map(msg => ({
+          id: msg.id,
+          sender: msg.sender_nickname || msg.sender || "익명",
+          text: msg.text || msg.content,
+          isMine: msg.is_mine !== undefined ? msg.is_mine : msg.isMine,
+          type: msg.type || "chat"
+        })));
+      }
+
+      // 대기 중인 신청 목록 저장
+      setRequests(response.data.requests || []);
+    } catch (error) {
+      console.error("채팅 내역 조회 실패:", error);
+    }
   };
 
-  // roomId에 해당하는 데이터 찾기 (없으면 101번 방 기본 제공)
-  const roomData = MOCK_DB[roomId] || MOCK_DB["101"];
-
-  const [requests, setRequests] = useState(roomData.requests);
-  const [messages, setMessages] = useState(roomData.messages);
+  useEffect(() => {
+    if (roomId) fetchRoomData();
+  }, [roomId]);
 
   // ChatListPage에서 초대를 받아 넘어왔는지 감지
   useEffect(() => {
@@ -107,7 +82,7 @@ function ChatRoomPage() {
     }
   }, [location]);
 
-  // 유저 프로필 클릭 시 모달 열기
+  // 유저 프로필 클릭 시 모달 열기 (POST /chats/<post_id>/respond/)
   const handleOpenModal = (req) => {
     openModal({
       content: (
@@ -120,43 +95,77 @@ function ChatRoomPage() {
       showImage: true,
       acceptText: "수락",
       rejectText: "거절",
-      onAccept: () => {
-        // 수락 시 시스템 메시지 추가 및 토스트 알림
-        const systemMessage = {
-          id: Date.now(),
-          type: "system",
-          text: `${req.name} 님이 입장하셨습니다.`,
-        };
-        setMessages((prev) => [...prev, systemMessage]);
-        showToast("매칭 완료되었습니다.");
+      onAccept: async() => {
+        try {
+          // 백엔드에 수락 요청 전송 (POST)
+          await api.post(`/chats/${roomId}/respond/`, { 
+            action: "accept",
+            request_id: req.id 
+          });
 
-        // 목록에서 제거
-        setRequests((prev) => prev.filter((r) => r.id !== req.id));
+          // API 성공 시: 수락 시스템 메시지 및 토스트 알림
+          const systemMessage = {
+            id: Date.now(),
+            type: "system",
+            text: `${req.name} 님이 입장하셨습니다.`,
+          };
+          setMessages((prev) => [...prev, systemMessage]);
+          showToast("매칭 완료되었습니다.");
+
+          // API 성공 시: 목록에서 방금 수락한 요청 지우기
+          setRequests((prev) => prev.filter((r) => r.id !== req.id));
+          
+        } catch (error) {
+          console.error("매칭 수락 실패:", error);
+          showToast("요청 처리에 실패했습니다.");
+        }
       },
-      onReject: () => {
-        // 거절 시 목록에서만 제거
-        setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      onReject: async () => {
+        try {
+          // 백엔드에 거절 요청 전송 (POST)
+          await api.post(`/chats/${roomId}/respond/`, { 
+            action: "reject",
+            request_id: req.id 
+          });
+
+          // API 성공 시: 거절 시 목록에서만 지우기
+          setRequests((prev) => prev.filter((r) => r.id !== req.id));
+          
+        } catch (error) {
+          console.error("매칭 거절 실패:", error);
+          showToast("요청 처리에 실패했습니다.");
+        }
       },
     });
   };
 
-  // 메시지 전송 함수
-  const handleSendMessage = () => {
+  // 메시지 전송 함수 (POST /chats/<post_id>/messages/)
+  const handleSendMessage = async () => {
     // 빈칸만 입력했을 때는 무시
     if (inputValue.trim() === "") return;
 
     // 새로운 메시지 객체 생성
-    const newMessage = {
-      id: Date.now(), // 고유한 ID 부여
-      sender: "나",
-      text: inputValue,
-      isMine: true,
-    };
-
-    // 기존 메시지 배열 끝에 새 메시지 추가
-    setMessages([...messages, newMessage]);
+    try {
+      const response = await api.post(`/chats/${roomId}/messages/`, {
+        text: inputValue, // 추후수정!!
+      });
+      // 성공 시 보낸 메시지를 화면에 반영
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: response.data.id || Date.now(),
+          sender: "나",
+          text: inputValue,
+          isMine: true,
+          type: "chat"
+        },
+      ]);
     // 입력창 비우기
     setInputValue("");
+    } catch (error) {
+      console.error("메시지 발송 실패:", error);
+      showToast("메시지 전송에 실패했습니다.");
+    }
   };
 
   // 엔터키를 눌렀을 때도 전송되게 하는 함수
@@ -183,14 +192,14 @@ function ChatRoomPage() {
 
         {/* 방 제목 가운데 정렬 */}
         <h2 className="absolute left-1/2 -translate-x-1/2 text-[22px] font-bold text-black">
-          {roomData.title}
+          {roomInfo.title}
         </h2>
         <div className="w-8"></div>
       </header>
 
       {/* 매칭 요청 수락/거절 (대기 중인 요청이 있을 때만 보임) */}
       {/* receiver일 때만 대기자 목록 렌더링 */}
-      {roomData.role === "receiver" && requests.length > 0 && (
+      {roomInfo.role === "receiver" && requests.length > 0 && (
         <section className="bg-blue-bg relative z-20 px-6 pt-5 pb-3">
           <div className="bg-blue-main absolute -top-3.5 right-6 rounded px-3 py-1.5 text-[11px] font-bold text-white shadow-sm">
             새로운 매칭신청

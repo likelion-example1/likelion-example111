@@ -10,7 +10,7 @@ function GNB() {
   const isMypageActive = currentPath.startsWith("/mypage");
   const isHomeActive = currentPath === "/";
   return (
-    <nav className="font-sf bg-blue-bg fixed bottom-0 left-0 z-50 w-full">
+    <nav className="font-sf max-w-120 bg-blue-bg fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full">
       <ul className="m-0 flex list-none items-center justify-around p-3">
         <li>
           {/* 클릭 시 /chat (채팅 목록) 경로로 이동 */}

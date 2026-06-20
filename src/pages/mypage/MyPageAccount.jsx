@@ -6,11 +6,14 @@ import GNB from "../../Components/GNB";
 import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
+import useAuthStore from "../../store/useAuthStore.js";
+
 function MyPageAccount() {
   const navigate = useNavigate();
 
   const showToast = useToastStore((state) => state.showToast);
   const openModal = useModalStore((state) => state.openModal);
+  const logout = useAuthStore((state) => state.logout);
 
   // 파일 업로드 input을 조작하기 위한 hook
   const fileInputRef = useRef(null);
@@ -19,7 +22,7 @@ function MyPageAccount() {
   // 프로필 정보
   const [user, setUser] = useState({
     loginId: "",
-    nickname: "",
+    host_nickname: "",
   });
 
   // 비밀번호 입력 상태
@@ -36,10 +39,10 @@ function MyPageAccount() {
 
         // 백엔드에서 받은 데이터로 업데이트
         setUser({
-          // 백엔드의 'username' 필드를 프론트의 'ID' 자리에
-          loginId: response.data.username || "",
-          // 백엔드의 'nickname' 필드를 '닉네임' 자리에
-          nickname: response.data.nickname || response.data.name || "",
+          // 백엔드의 'id' 필드를 프론트의 'ID' 자리에
+          loginId: response.data.id || "",
+          // 백엔드의 'username' 필드를 '호스트 닉네임' 자리에
+          host_nickname: response.data.username || response.data.name || "",
         });
       } catch (error) {
         console.error("프로필 정보 조회 실패:", error);
@@ -61,6 +64,32 @@ function MyPageAccount() {
       // 추후 프로필 사진 변경 API 연동
     }
   };
+
+  // 로그아웃 버튼 클릭 시 실행될 함수 (POST)
+    const handleLogout = async () => {
+      try {
+      // 서버에 로그아웃 알리기
+      await api.post("/accounts/logout/");
+    } catch (error) {
+      console.error("서버 로그아웃 통신 에러 (이미 로그아웃됨):", error);
+    } finally {
+      // 로컬 스토리지 키 삭제
+      localStorage.removeItem("auth-storage");
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+
+      // Zustand의 persist 메모리 기능 셧다운
+      try {
+        useAuthStore.persist.clearStorage();
+      } catch (e) {
+        console.log("Zustand 내장 청소 기능 예외 무시:", e);
+      }
+
+      showToast("성공적으로 로그아웃 되었습니다.");
+      window.location.replace("/login");
+    }
+  };
+
 
   // 완료(비밀번호 변경) 버튼 클릭 (PUT)
   const handleComplete = async () => {
@@ -173,7 +202,7 @@ function MyPageAccount() {
               <span className="text-[16px] font-bold text-black">|</span>
             </div>
             <span className="text-[15px] font-medium text-gray-500">
-              {user.nickname}
+              {user.host_nickname}
             </span>
           </div>
 
@@ -227,6 +256,16 @@ function MyPageAccount() {
               className="w-full bg-transparent text-[14px] font-medium text-gray-500 outline-none placeholder:text-gray-400"
             />
           </div>
+        </div>
+
+        {/* 로그아웃 버튼 영역 */}
+        <div className="mt-10 flex justify-center">
+          <button
+            onClick={handleLogout}
+            className="text-gray-4 cursor-pointer text-[13px] font-medium underline underline-offset-2 transition-opacity hover:opacity-70"
+          >
+            로그아웃하기
+          </button>
         </div>
 
         {/* 하단 버튼 영역 */}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { use, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api.js";
 import useToastStore from "../store/useToastStore.js";
@@ -50,9 +50,10 @@ function SignupPage() {
 
     try {
       const response = await api.post("/accounts/signup/", {
-        username: id,
-        password: pw,
-      });
+        id: id, 
+        pw: pw, 
+        username: userName,
+      }); 
 
       console.log("회원가입 성공:", response.data);
       showToast("회원가입 성공! 로그인 화면으로 이동합니다.");

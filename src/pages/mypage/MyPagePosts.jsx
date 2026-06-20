@@ -18,20 +18,29 @@ function MyPagePosts() {
   // 게시글 목록 데이터 가져오기 (GET)
   const fetchPosts = async () => {
     try {
+      // 내 프로필 정보 가져오기
+      const profileResponse = await api.get("/accounts/profile/");
+      const myNickname = profileResponse.data.username || profileResponse.data.name; 
+
+      // 서버에 있는 전체 게시글 목록 가져오기
       const response = await api.get("/posts/");
 
-      console.log("백엔드가 보내준 게시글 목록:", response.data);
+      // 게시글의 'host_nickname'과 '내 닉네임'이 똑같은 글만 걸러내기
+      const myOnlyPosts = response.data.filter(
+        (post) => post.host_nickname === myNickname
+      );
 
-      // 백엔드 데이터 + 가상 데이터 (백엔드 구현X)
-      const formattedPosts = response.data.map((post) => ({
+      // 백엔드 데이터 + 가상 데이터
+      const formattedPosts = myOnlyPosts.map((post) => ({
         id: post.id,
-        author: post.nickname || "익명", // 백엔드 구현X, 고정값
+        author: post.host_nickname || "익명",
         title: post.title,
         content: post.body,
         keywords: [post.category || "없음", post.location || "없음"], // 태그 비어있을 시 고정값 '없음'
         status: "매칭 중", // 고정값
         matchRate: "80%", // 고정값
-        price: "14,000", // 고정값
+        price: [post.min_order_amount ?? "설정되지 않음"],
+        photo: post.photo, // 백엔드에서 받아온 사진 URL
         rawPost: post, // EditPage로 백엔드 데이터를 그대로 넘겨주기 위해 보관
       }));
 
@@ -173,11 +182,12 @@ function MyPagePosts() {
                 {/* 식당 사진 영역 */}
                 <div className="bg-gray-2 h-35 w-30 shrink-0 overflow-hidden rounded-lg">
                   <img
-                    src="/images/FoodPhoto.png"
-                    alt="식당 사진"
-                    className="h-full w-full object-cover"
+                   // 백엔드에서 준 photo가 있으면 그걸 쓰고, 없으면 기본 default 사진 띄우기
+                   src={post.photo ? post.photo : "/images/FoodPhoto.png"}
+                   alt="식당 사진"
+                   className="h-full w-full object-cover"
                   />
-                </div>
+              </div>
               </article>
             );
           })

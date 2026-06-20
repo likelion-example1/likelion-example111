@@ -57,7 +57,7 @@ const ChatRoomCard = ({ room, onClick }) => {
 
       {/* 식당 제목 */}
       <h3 className="-mt-3 mb-2 text-[26px] font-bold text-black">
-        {room.restaurantName}
+        {room.restaurantName || room.title}
       </h3>
 
       {/* 태그 영역 */}

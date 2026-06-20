@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import api from "../../api.js";
 import GNB from "../../Components/GNB";
+import useToastStore from "../../store/useToastStore";
 
 export function MyPageHistoryDetail() {
   const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
 
   // URL에서 :postId 부분을 가져오는 useParams 훅
   const { postId } = useParams();
@@ -11,50 +14,76 @@ export function MyPageHistoryDetail() {
   // 상단 탭 상태
   const [activeTab, setActiveTab] = useState("received");
 
-  // 백엔드가 연결되기 전까지 화면을 띄워줄 가상 데이터
-  const postDetail = {
-    title: "Waffle It Up",
-    author: "김이화",
-    date: "2026.04.02 12:36",
-    keywords: ["디저트 및 음료", "포스코관"],
-    status: "매칭 중",
-    matchRate: "80%",
-    price: "14,000",
-    content:
-      "2교시 끝나고 와플잇업에서 배달시키실 분 구합니다! 이번 교시\n끝나고 1시 40분쯤 미리 시킬 생각입니당\n여기 젤라또 그린티쿠키랑 딸기밀크티 새로 나왔는데 맛있어용\n포관 오봉도시락 앞에서 픽업해요!!",
-    currentAmount: "13,200",
-    targetAmount: "14,000",
-    participants: [
-      {
-        id: 1,
-        name: "김이화",
-        isMe: true,
-        menu: "un gelato",
-        price: "4,300원",
-      },
+  // 데이터 상태 관리
+  const [postDetail, setPostDetail] = useState(null);
+  const [myId, setMyId] = useState(null); // 'me' 뱃지를 달기 위해 내 ID 저장
+  const [isLoading, setIsLoading] = useState(true);
 
-      {
-        id: 2,
-        name: "걍걍걍",
-        isMe: false,
-        menu: "아메리카노",
-        price: "4,800원",
-      },
+  useEffect(() => {
+    const fetchDetailData = async () => {
+      try {
+        // 내 프로필 정보 가져오기
+        const profileResponse = await api.get("/accounts/profile/");
+        setMyId(profileResponse.data.id || profileResponse.data.pk);
+        const numericPostId = postId.replace(/[^0-9]/g, "");
 
-      {
-        id: 3,
-        name: "학관의노예",
-        isMe: false,
-        menu: "un gelato",
-        price: "4,300원",
-      },
-    ],
-  };
+        // postId에 해당하는 특정 게시글 상세 정보 가져오기
+        const postResponse = await api.get(`/posts/${numericPostId}/`);
+        setPostDetail(postResponse.data);
+      } catch (error) {
+        console.error("상세 정보 조회 실패:", error);
+        showToast("게시글 정보를 불러오는 데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    if (postId) {
+      fetchDetailData();
+    }
+  }, [postId]);
+
+  // 로딩 중일 때 보여줄 화면
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <span className="text-gray-4 font-bold">로딩 중...</span>
+      </div>
+    );
+  }
+
+  // 게시글 정보가 없을 때 보여줄 화면
+  if (!postDetail) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white">
+        <span className="text-gray-4 mb-4 font-bold">게시글을 찾을 수 없습니다.</span>
+        <button onClick={() => navigate(-1)} className="text-blue-main font-bold">
+          뒤로 가기
+        </button>
+      </div>
+    );
+  }
+
+  // 날짜, 금액, 아이콘 등
   const statusIcon =
-    postDetail.status === "매칭 중"
+    postDetail.status === "매칭 중" || postDetail.status === "모집중"
       ? "/icons/Matching.svg"
       : "/icons/MatchComplete.svg";
+
+  // 날짜 (YYYY.MM.DD HH:MM)
+  const formattedDate = postDetail.date
+    ? new Date(postDetail.date).toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "날짜 정보 없음";
+
+  // 금액 
+  const formattedPrice =
+    postDetail.min_order_amount ?? "설정되지 않음";
 
   return (
     <div className="font-sf relative min-h-screen bg-white pt-10 pb-28">
@@ -119,11 +148,11 @@ export function MyPageHistoryDetail() {
 
             <div className="flex flex-col">
               <span className="text-lg font-bold text-black">
-                {postDetail.author}
+                {postDetail.host_nickname}
               </span>
 
               <span className="text-gray-4 mt-0.5 text-[11px] font-medium">
-                {postDetail.date}
+                {formattedDate}
               </span>
             </div>
           </div>
@@ -132,7 +161,7 @@ export function MyPageHistoryDetail() {
 
           <div className="flex flex-col items-end gap-1.5">
             <div className="text-blue-main flex gap-2 text-xs font-bold">
-              {postDetail.keywords.map((kw, i) => (
+              {postDetail.keywords?.map((kw, i) => (
                 <span key={i}>{kw}</span>
               ))}
             </div>
@@ -142,19 +171,27 @@ export function MyPageHistoryDetail() {
 
               <span>{postDetail.matchRate}</span>
 
-              <span>{postDetail.price}</span>
+              <span>{formattedPrice}</span>
             </div>
           </div>
         </div>
 
         {/* 식당/음식 사진 */}
 
-        <div className="mb-6 flex aspect-4/3 w-130 items-center justify-center overflow-hidden rounded-sm bg-[#d9d9d9]">
-          <img
-            src="/images/FoodPhoto.png"
-            alt="음식 사진"
-            className="h-50 w-40 object-cover"
-          />
+        <div className="mb-6 flex aspect-4/3 items-center justify-center overflow-hidden rounded-sm bg-gray-2">
+          {postDetail.photo ? (
+            <img
+              src={postDetail.photo}
+              alt="음식 사진"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <img
+              src="/images/FoodPhoto.png"
+              alt="음식 사진"
+              className="h-full w-full object-cover"
+            />
+          )}
         </div>
 
         {/* 본문 내용 */}
@@ -172,12 +209,15 @@ export function MyPageHistoryDetail() {
         <div>
           <h3 className="text-blue-main mb-1 font-bold">매칭에 참여한 유저</h3>
 
-          <p className="text-blue-main mb-6 text-right text-[13px] font-bold">
-            {postDetail.currentAmount} / {postDetail.targetAmount}
-          </p>
+          {postDetail.targetAmount && (
+            <p className="text-blue-main mb-6 text-right text-[13px] font-bold">
+              {postDetail.currentAmount ?? 0} / {postDetail.min_order_amount ?? 0}
+            </p>
+          )}
+          <div className="mb-6"></div>
 
           <div className="flex flex-col gap-5">
-            {postDetail.participants.map((user) => (
+            {postDetail.participants?.map((user) => (
               <div key={user.id} className="flex items-center justify-between">
                 {/* 프로필 + 이름 */}
 
