@@ -67,6 +67,7 @@ function PostDetailPage() {
     price: "14,000", 
     content: post.body || "내용이 없습니다.",
     photo: post.photo || "/images/FoodPhoto.png", // 사진이 없으면 기본 이미지
+    profileImage: post.profile_image || "/images/CharacterProfile.png", // 프로필 사진 설정되지 않은 경우 기본 캐릭터 이미지
   };
 
   const statusIcon =
@@ -97,7 +98,7 @@ function PostDetailPage() {
           <div className="flex items-center gap-3">
             <div>
               <img
-                src="/images/CharacterProfile.png"
+                src={postDetail.profileImage}
                 alt="프로필"
                 className="h-15 w-15 object-contain"
               />

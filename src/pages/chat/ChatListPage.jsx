@@ -13,19 +13,42 @@ function ChatListPage() {
   const [isPastHidden, setIsPastHidden] = useState(false);
 
   //  채팅방 목록을 저장할 상태 추가
-  const [chats, setChats] = useState([]);
+  const [formattedChats, setFormattedChats] = useState([]);
 
   // 컴포넌트 마운트 시 채팅방 목록 가져오기 (GET /chats/)
   useEffect(() => {
     const fetchChats = async () => {
       try {
         const response = await api.get("/chats/");
-        console.log("👀 백엔드가 보내준 채팅방 목록:", response.data);
+        console.log("백엔드가 보내준 데이터:", response.data);
         
         // 데이터가 배열로 정상적으로 올 경우 상태에 저장
         if (Array.isArray(response.data)) {
-          setChats(response.data);
+          const processedChats = response.data.map((room) => {
+
+
+            return {
+              id: room.id,
+              status: (room.status_display === "모집중" || room.status_display === "매칭 중") ? "매칭 중" : "매칭 완료",
+              restaurantName: room.title || "제목 없음", 
+              locations: [room.location || "장소 미정"],
+              categories: [room.category || "기타"],
+              author: room.host_nickname || "익명",
+              lastMessage: room.last_message || "아직 대화가 없습니다.",
+              newRequests: room.pending_count || 0, 
+              
+              // 기타 빈 값들 고정값 처리
+              participants: [], 
+              currentAmount:"0",
+              targetAmount: [room.min_order_amount || ""],
+
+              role: room.type || "received", 
+            };
+          });
+          console.log("프론트엔드 통과 데이터:", processedChats);
+          setFormattedChats(processedChats);
         }
+        
       } catch (error) {
         console.error("채팅방 목록 불러오기 실패:", error);
       }
@@ -33,28 +56,12 @@ function ChatListPage() {
     fetchChats();
   }, []);
 
-  // (추후수정!!) 백엔드 데이터 구조에 맞추어 그룹화 및 매핑 안전장치 처리
-  const formattedChats = chats.map((room) => ({
-    id: room.id,
-    status: room.status || "매칭 중",
-    restaurantName: room.restaurantName || room.title || "식당 이름 없음",
-    // 백엔드에서 배열이 아닌 단일 문자열로 줄 경우를 대비해 배열화 처리
-    locations: Array.isArray(room.locations) ? room.locations : [room.location || "장소 미정"],
-    categories: Array.isArray(room.categories) ? room.categories : [room.category || "기타"],
-    author: room.author_nickname || room.author || "익명",
-    lastMessage: room.lastMessage || room.last_message || "아직 대화가 없습니다.",
-    participants: room.participants || [],
-    newRequests: room.newRequests || room.new_requests || 0,
-    currentAmount: room.currentAmount || room.current_amount || "0",
-    targetAmount: room.targetAmount || room.target_amount || "0",
-    role: room.role || (room.is_host ? "receiver" : "sender"), // 내가 방장이면 receiver
-  }));
 
   // 현재 탭 및 상태(진행중/지난매칭)에 따라 필터링
-  const receivedActiveChats = formattedChats.filter(room => room.role === "receiver" && room.status === "매칭 중");
-  const receivedPastChats = formattedChats.filter(room => room.role === "receiver" && room.status !== "매칭 중");
-  const sentActiveChats = formattedChats.filter(room => room.role === "sender" && room.status === "매칭 중");
-  const sentPastChats = formattedChats.filter(room => room.role === "sender" && room.status !== "매칭 중");
+  const receivedActiveChats = formattedChats.filter(room => room.role === "received" && room.status === "매칭 중");
+  const receivedPastChats = formattedChats.filter(room => room.role === "received" && room.status !== "매칭 중");
+  const sentActiveChats = formattedChats.filter(room => room.role === "sent" && room.status === "매칭 중");
+  const sentPastChats = formattedChats.filter(room => room.role === "sent" && room.status !== "매칭 중");
 
   // 현재 탭에 따라 보여줄 데이터를 결정
   const displayActiveChats =
@@ -62,17 +69,20 @@ function ChatListPage() {
   const displayPastChats =
     activeTab === "received" ? receivedPastChats : sentPastChats;
 
+    console.log(`현재 '${activeTab}' 탭에 띄울 진행중 방 개수:`, displayActiveChats.length);
   // 전체 안 읽은 요청 수 계산
   const totalNewRequests = receivedActiveChats.reduce((sum, room) => sum + room.newRequests, 0);
   
   // 채팅방 클릭 시 해당 방으로 이동하는 함수
   const goToChatRoom = (room) => {
-    // 내가 보낸 요청 중 '매칭 중'인 방을 누르면, 초대가 수락되었다고 가정하고 이동 (이후 백엔드 로직 구현 후 수정!!)
-    if (room.role === "sender" && room.status === "매칭 중") {
-      navigate(`/chat/${room.id}`, { state: { isInvited: true } });
-    } else {
-      navigate(`/chat/${room.id}`);
-    }
+    // 내가 보낸 요청 중 '매칭 중'인 방을 누르면, 초대가 수락되어 이동
+    navigate(`/chat/${room.id}`, { 
+      state: { 
+        isParticipant: room.role === "sent",
+        title: room.restaurantName,
+        role: room.role 
+      } 
+    });
   };
   return (
     <div className="font-sf min-h-screen bg-white pb-24">

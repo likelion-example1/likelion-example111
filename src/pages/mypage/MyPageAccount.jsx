@@ -18,11 +18,15 @@ function MyPageAccount() {
   // 파일 업로드 input을 조작하기 위한 hook
   const fileInputRef = useRef(null);
 
+  // 사용자가 선택한 파일 원본을 잠시 들고 있을 상태 (완료 버튼 누를 때까지 대기)
+  const [selectedFile, setSelectedFile] = useState(null);
+
   // 상태 관리
   // 프로필 정보
   const [user, setUser] = useState({
     loginId: "",
     host_nickname: "",
+    profileImage: "/images/ProfileDefault.png", // 기본 이미지
   });
 
   // 비밀번호 입력 상태
@@ -43,6 +47,8 @@ function MyPageAccount() {
           loginId: response.data.id || "",
           // 백엔드의 'username' 필드를 '호스트 닉네임' 자리에
           host_nickname: response.data.username || response.data.name || "",
+          // 백엔드의 'profile_image' 필드를 '프로필 이미지' 자리에
+          profileImage: response.data.profile_image || "/images/ProfileDefault.png",
         });
       } catch (error) {
         console.error("프로필 정보 조회 실패:", error);
@@ -57,14 +63,17 @@ function MyPageAccount() {
   };
 
   // 사용자가 실제 이미지를 선택했을 때 실행
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      showToast(`${file.name} 사진이 선택되었습니다.`);
-      // 추후 프로필 사진 변경 API 연동
+      setSelectedFile(file); // 완료 버튼을 누를 때 백엔드에 보내기 위해 파일 임시 저장
+      setUser((prev) => ({
+        ...prev,
+        profileImage: URL.createObjectURL(file), // 화면에 미리보기 띄우기
+      }));
+      showToast("사진이 선택되었습니다. 완료 버튼을 눌러 저장해주세요.");
     }
   };
-
   // 로그아웃 버튼 클릭 시 실행될 함수 (POST)
     const handleLogout = async () => {
       try {
@@ -93,32 +102,61 @@ function MyPageAccount() {
 
   // 완료(비밀번호 변경) 버튼 클릭 (PUT)
   const handleComplete = async () => {
-    // 유효성 검사
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      showToast("모든 비밀번호 항목을 입력해주세요.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      showToast("새 비밀번호가 일치하지 않습니다.");
-      return;
+    // 사용자가 셋 중 하나라도 입력하면 검사
+    const isPasswordChangeIntent = oldPassword || newPassword || confirmPassword;
+    let isChanged = false; // 뭐라도 하나 바뀐 게 있는지 체크하는 변수
+
+    // 비밀번호 변경 로직
+    if (isPasswordChangeIntent) {
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        showToast("비밀번호를 변경하시려면 모든 항목을 입력해주세요.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showToast("새 비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      try {
+        await api.post("/accounts/password-change/", {
+          old_password: oldPassword,
+          new_password: newPassword,
+        });
+        isChanged = true;
+      } catch (error) {
+        console.error("비밀번호 변경 실패:", error);
+        const errorMsg =
+          error.response?.data?.message ||
+          "비밀번호 변경에 실패했습니다. 조건을 확인해주세요.";
+        showToast(errorMsg);
+        return; // 비밀번호 변경 실패 시 여기서 멈춤 (사진 업로드도 진행 안 함)
+      }
     }
 
-    try {
-      // 비밀번호 변경 API 요청
-      await api.post("/accounts/password-change/", {
-        old_password: oldPassword,
-        new_password: newPassword,
-      });
+    // 프로필 사진 변경 로직
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append("profile_image", selectedFile);
 
-      showToast("비밀번호가 성공적으로 변경되었습니다.");
-      navigate("/mypage");
-    } catch (error) {
-      console.error("비밀번호 변경 실패:", error);
-      const errorMsg =
-        error.response?.data?.message ||
-        "비밀번호 변경에 실패했습니다. 8자 이상, 영문, 숫자, 특수문자를 혼합했는지 확인해주세요.";
-      showToast(errorMsg);
+        await api.patch("/accounts/profile/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        isChanged = true;
+      } catch (error) {
+        console.error("프로필 사진 업로드 실패:", error);
+        showToast("사진 업로드에 실패했습니다.");
+        return;
+      }
     }
+
+    // 마무리 처리
+    if (isChanged) {
+      showToast("성공적으로 변경되었습니다.");
+    }
+    navigate("/mypage");
   };
 
   // 취소 버튼 클릭 시 실행될 모달 호출 함수
@@ -159,7 +197,7 @@ function MyPageAccount() {
         <div className="mb-16 flex flex-col items-center">
           <div className="bg-blue-bg mb-3 flex h-32 w-32 items-center justify-center overflow-hidden rounded-full">
             <img
-              src="/images/ProfileDefault.png"
+              src={user.profileImage}
               alt="프로필 이미지"
               className="h-50 w-50 object-contain"
             />

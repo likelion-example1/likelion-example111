@@ -1,7 +1,7 @@
 const ChatRoomCard = ({ room, onClick }) => {
   // '매칭 중'인지 확인하여 파란색 테마를 쓸지, 회색 테마를 쓸지 결정
   const isOngoing = room.status === "매칭 중";
-  const isSender = room.role === "sender";
+  const isSender = room.role === "sent" || room.role === "sender";
 
   return (
     <div

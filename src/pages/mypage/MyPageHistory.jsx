@@ -52,8 +52,8 @@ export function MyPageHistory() {
               title: post.title,
               content: post.body,
               keywords: [post.category || "없음", post.location || "없음"],
-              status: post.status || "매칭 중",
-              matchRate: "80%", // 고정값
+              status: "매칭중",
+              matchRate: "0%", // 고정값
               price: post.min_order_amount ?? "설정되지 않음",
               photo: post.photo,
               rawPost: post,

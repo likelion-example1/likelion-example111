@@ -18,47 +18,80 @@ function ChatRoomPage() {
   const [inputValue, setInputValue] = useState("");
 
 // 실시간 데이터 관리를 위한 상태들
-  const [roomInfo, setRoomInfo] = useState({ title: "배달 매칭방", role: "receiver" });
+  const [roomInfo, setRoomInfo] = useState({ 
+    title: location.state?.title || "배달 매칭방", 
+    role: location.state?.role || "received" 
+  });
   const [requests, setRequests] = useState([]);
   const [messages, setMessages] = useState([]);
 
   // 메시지 및 채팅방 세부 데이터 불러오기 (GET)
-  const fetchRoomData = async () => {
-    try {
-      // 대화 메시지 불러오기 API 호출
-      const response = await api.get(`/chats/${roomId}/messages/`);
-      console.log("👀 백엔드가 보내준 채팅방 상세 정보:", response.data);
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      try {
+        // Promise.all을 사용해 두 API를 동시 호출
+      const [messagesResponse, requestsResponse] = await Promise.all([
+        api.get(`/chats/${roomId}/messages/`),
+        api.get(`/chats/${roomId}/requests/`)
+      ]);
 
-      // 백엔드 구조에 맞춰 안전하게 상태 분해 및 저장
-      setRoomInfo({
-        title: response.data.title || response.data.restaurantName || "배달 매칭방",
-        role: response.data.role || (response.data.is_host ? "receiver" : "sender"),
-      });
+      console.log("백엔드가 준 메시지 정보:", messagesResponse.data);
+      console.log("백엔드가 준 대기자 목록 정보:", requestsResponse.data);
 
-      if (response.data.messages) {
-        setMessages(response.data.messages.map(msg => ({
+      // 백엔드가 빈 배열이나 메시지 리스트만 보낸 경우
+      if (Array.isArray(messagesResponse.data)) {
+        setMessages(messagesResponse.data.map(msg => ({
           id: msg.id,
           sender: msg.sender_nickname || msg.sender || "익명",
           text: msg.text || msg.content,
           isMine: msg.is_mine !== undefined ? msg.is_mine : msg.isMine,
           type: msg.type || "chat"
         })));
+        } 
+        // 백엔드가 객체 형태로 자세한 정보를 보낸 경우
+        else if (typeof messagesResponse.data === "object" && messagesResponse.data !== null) {
+        if (messagesResponse.data.messages) {
+          setMessages(messagesResponse.data.messages.map(msg => ({
+            id: msg.id,
+            sender: msg.sender_nickname || msg.sender || "익명",
+            text: msg.text || msg.content,
+            isMine: msg.is_mine !== undefined ? msg.is_mine : msg.isMine,
+            type: msg.type || "chat"
+          })));
+        }
+      }
+          
+      // 대기 중인 신청 목록 세팅
+      let rawRequests = [];
+      if (Array.isArray(requestsResponse.data)) {
+        rawRequests = requestsResponse.data;
+      } else if (requestsResponse.data?.requests) {
+        rawRequests = requestsResponse.data.requests;
       }
 
-      // 대기 중인 신청 목록 저장
-      setRequests(response.data.requests || []);
-    } catch (error) {
-      console.error("채팅 내역 조회 실패:", error);
-    }
-  };
+      const formattedRequests = rawRequests.map((req) => ({
+        // 백엔드의 guest_id를 프론트의 id로 변환
+        id: req.guest_id || req.id, 
+        // 백엔드의 guest_nickname을 프론트의 name으로 변환
+        name: req.guest_nickname || req.name, 
+        status: req.status 
+      }));
 
-  useEffect(() => {
-    if (roomId) fetchRoomData();
-  }, [roomId]);
+      setRequests(formattedRequests);
+      } catch (error) {
+        console.error("채팅 내역 및 대기자 목록 조회 실패:", error);
+      }
+    };
+
+    if (roomId) {
+      fetchRoomData();
+    }
+  }, [roomId, location.state]);
+
 
   // ChatListPage에서 초대를 받아 넘어왔는지 감지
   useEffect(() => {
-    if (location.state?.isInvited) {
+    if (location.state?.isParticipant) {
       showToast("매칭 초대되었습니다.");
 
       // 중복 메시지 방지
@@ -70,12 +103,11 @@ function ChatRoomPage() {
         if (isAlreadyInvited) return prev;
 
         // 없다면 새로운 시스템 메시지 추가
-        const sysMsg = {
-          id: Date.now(),
-          type: "system",
-          text: "매칭 초대되었습니다.",
-        };
-        return [...prev, sysMsg];
+
+        return [
+          ...prev, 
+          { id: Date.now(), type: "system", text: "매칭 초대되었습니다." }
+        ];
       });
 
       window.history.replaceState({}, document.title);
@@ -147,7 +179,7 @@ function ChatRoomPage() {
     // 새로운 메시지 객체 생성
     try {
       const response = await api.post(`/chats/${roomId}/messages/`, {
-        text: inputValue, // 추후수정!!
+        content: inputValue, // 추후수정!! _260621 수정완
       });
       // 성공 시 보낸 메시지를 화면에 반영
       setMessages((prev) => [
@@ -199,7 +231,7 @@ function ChatRoomPage() {
 
       {/* 매칭 요청 수락/거절 (대기 중인 요청이 있을 때만 보임) */}
       {/* receiver일 때만 대기자 목록 렌더링 */}
-      {roomInfo.role === "receiver" && requests.length > 0 && (
+      {roomInfo.role === "received" && requests.length > 0 && (
         <section className="bg-blue-bg relative z-20 px-6 pt-5 pb-3">
           <div className="bg-blue-main absolute -top-3.5 right-6 rounded px-3 py-1.5 text-[11px] font-bold text-white shadow-sm">
             새로운 매칭신청
