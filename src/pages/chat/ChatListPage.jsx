@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react"; // useEffect 삭제, useQuery로 대체
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../../api.js";
 import ChatRoomCard from "../../Components/ChatRoomCard";
@@ -13,48 +14,43 @@ function ChatListPage() {
   const [isPastHidden, setIsPastHidden] = useState(false);
 
   //  채팅방 목록을 저장할 상태 추가
-  const [formattedChats, setFormattedChats] = useState([]);
+  // useState와 useEffect 삭제, useQuery로 대체
+  const { data: formattedChats = [], isLoading } = useQuery({
+    queryKey: ["chats"],
+    queryFn: async () => {
+      const response = await api.get("/chats/");
+      console.log("백엔드가 보내준 데이터:", response.data);
 
-  // 컴포넌트 마운트 시 채팅방 목록 가져오기 (GET /chats/)
-  useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const response = await api.get("/chats/");
-        console.log("백엔드가 보내준 데이터:", response.data);
+      if (Array.isArray(response.data)) {
+        const processedChats = response.data.map((room) => ({
+          id: room.id,
+          status:
+            room.status_display === "모집중" || room.status_display === "매칭 중"
+              ? "매칭 중"
+              : "매칭 완료",
+          restaurantName: room.title || "제목 없음",
+          locations: [room.location || "장소 미정"],
+          categories: [room.category || "기타"],
+          author: room.host_nickname || "익명",
+          lastMessage: room.last_message || "아직 대화가 없습니다.",
+          newRequests: room.pending_count || 0,
+
+          // 기타 빈 값들 고정값 처리
+          participants: [],
+          currentAmount: "0",
+          targetAmount: [room.min_order_amount || ""],
+
+          role: room.type || "received",
+        }));
         
-        // 데이터가 배열로 정상적으로 올 경우 상태에 저장
-        if (Array.isArray(response.data)) {
-          const processedChats = response.data.map((room) => {
-
-
-            return {
-              id: room.id,
-              status: (room.status_display === "모집중" || room.status_display === "매칭 중") ? "매칭 중" : "매칭 완료",
-              restaurantName: room.title || "제목 없음", 
-              locations: [room.location || "장소 미정"],
-              categories: [room.category || "기타"],
-              author: room.host_nickname || "익명",
-              lastMessage: room.last_message || "아직 대화가 없습니다.",
-              newRequests: room.pending_count || 0, 
-              
-              // 기타 빈 값들 고정값 처리
-              participants: [], 
-              currentAmount:"0",
-              targetAmount: [room.min_order_amount || ""],
-
-              role: room.type || "received", 
-            };
-          });
-          console.log("프론트엔드 통과 데이터:", processedChats);
-          setFormattedChats(processedChats);
-        }
-        
-      } catch (error) {
-        console.error("채팅방 목록 불러오기 실패:", error);
+        console.log("프론트엔드 통과 데이터:", processedChats);
+        return processedChats;
       }
-    };
-    fetchChats();
-  }, []);
+      
+      // 배열이 아니면 빈 배열 반환
+      return [];
+    },
+  });
 
 
   // 현재 탭 및 상태(진행중/지난매칭)에 따라 필터링
@@ -126,6 +122,13 @@ function ChatListPage() {
       </div>
 
       <main className="px-6 py-2">
+        {/* 로딩 상태 처리 */}
+        {isLoading ? (
+          <div className="py-10 text-center text-sm font-bold text-gray-400">
+            채팅방을 불러오는 중입니다...
+          </div>
+        ) : (
+          <>
         {/* 진행 중인 채팅방 목록 */}
         <section>
           {displayActiveChats.map((room) => (
@@ -159,7 +162,9 @@ function ChatListPage() {
               />
             ))}
           </section>
-        )}
+              )}
+              </>
+               )}
       </main>
 
       {/* 바텀 네비게이션 바 */}

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../../api.js";
 import HistoryCard from "../../Components/HistoryCard"; // 리스트에 들어갈 항목들을 카드 컴포넌트로 제작
@@ -12,66 +13,53 @@ export function MyPageHistory() {
   // 현재 선택된 탭 저장 (기본값: '내가 받은')
   const [activeTab, setActiveTab] = useState("received");
 
-  // 매칭 내역 데이터 상태 관리
-  const [historyData, setHistoryData] = useState([]);
-
   // API 연동 및 데이터 분류 로직
-  useEffect(() => {
-    const fetchHistoryData = async () => {
-      try {
-        // 내 프로필 정보 가져오기
-        const profileResponse = await api.get("/accounts/profile/");
-        const myId = profileResponse.data.id || profileResponse.data.pk; 
-        const myNickname = profileResponse.data.username || profileResponse.data.name;
+  // useEffect 삭제, useQuery 적용
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["matchingHistory"],
+    queryFn: async () => {
+      // 내 프로필 정보 가져오기
+      const profileResponse = await api.get("/accounts/profile/");
+      const myId = profileResponse.data.id || profileResponse.data.pk; 
+      const myNickname = profileResponse.data.username || profileResponse.data.name;
 
-        // 전체 게시글 데이터 가져오기
-        const postsResponse = await api.get("/posts/");
+      // 전체 게시글 데이터 가져오기
+      const postsResponse = await api.get("/posts/");
 
-        // 전체 게시글을 돌면서 '내가 받은' 것과 '내가 보낸' 것을 분류합니다.
-        const processedData = postsResponse.data
-          .map((post) => {
-            // 내가 작성자인 경우
-            const isHost = post.host_nickname === myNickname;
-            // 내가 작성자가 아니고, 참여자(participants) 목록에 내 ID가 있는 경우
-            const isParticipant = !isHost && post.participants?.includes(myId);
+      // '내가 받은' 것과 '내가 보낸' 것을 분류
+      const processedData = postsResponse.data
+        .map((post) => {
+          const isHost = post.host_nickname === myNickname;
+          const isParticipant = !isHost && post.participants?.includes(myId);
 
-            let type = "";
-            if (isHost) {
-              type = "received"; // 내가 쓴 글 -> 내가 받은 매칭
-            } else if (isParticipant) {
-              type = "sent"; // 남의 글에 신청함 -> 내가 보낸 매칭
-            }
+          let type = "";
+          if (isHost) {
+            type = "received"; 
+          } else if (isParticipant) {
+            type = "sent"; 
+          }
 
-            // 둘 다 해당 안 되면 화면에 보여줄 필요가 없으므로 null 반환
-            if (!type) return null;
+          if (!type) return null;
 
-            return {
-              id: post.id,
-              type: type,
-              author: post.host_nickname || "익명",
-              title: post.title,
-              content: post.body,
-              keywords: [post.category || "없음", post.location || "없음"],
-              status: "매칭중",
-              matchRate: "0%", // 고정값
-              price: post.min_order_amount ?? "설정되지 않음",
-              photo: post.photo,
-              rawPost: post,
-            };
-          })
-          .filter(Boolean); // 배열에서 null로 걸러진 데이터들 삭제
+          return {
+            id: post.id,
+            type: type,
+            author: post.host_nickname || "익명",
+            title: post.title,
+            content: post.body,
+            keywords: [post.category || "없음", post.location || "없음"],
+            status: "매칭중",
+            matchRate: "0%", 
+            price: post.min_order_amount ?? "설정되지 않음",
+            photo: post.photo,
+            rawPost: post,
+          };
+        })
+        .filter(Boolean); // 배열에서 null로 걸러진 데이터들 삭제
 
-        // 완성된 데이터를 상태에 저장
-        setHistoryData(processedData);
-
-      } catch (error) {
-        console.error("매칭 내역 조회 실패:", error);
-        showToast("매칭 내역을 불러오는 데 실패했습니다.");
-      }
-    };
-
-    fetchHistoryData();
-  }, []);
+      return processedData;
+    },
+  });
 
   // 전체 데이터 중 현재 선택된 탭(activeTab)과 타입이 일치하는 데이터만 걸러내는 함수!
   const filteredData = historyData.filter((post) => post.type === activeTab);
@@ -113,8 +101,12 @@ export function MyPageHistory() {
 
         <section className="px-6">
           {/* 필터링된 매칭 내역 리스트 */}
-
-          {filteredData.length > 0 ? (
+          {isLoading ? (
+            <div className="text-gray-4 py-16 text-center font-medium">
+              매칭 내역을 불러오는 중입니다...
+            </div>
+          ) :
+          filteredData.length > 0 ? (
             filteredData.map((post) => (
               <HistoryCard key={post.id} post={post} />
             ))

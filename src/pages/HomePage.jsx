@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom"; // 페이지 이동을 위한 훅
 import GNB from "../Components/GNB"; // GNB 컴포넌트 불러오기
 import TimelineCard from "../Components/TimelineCard";
@@ -11,14 +12,10 @@ function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const showToast = useToastStore((state) => state.showToast);
+  const queryClient = useQueryClient();
 
   const { user } = useAuthStore(); 
   const currentUserId = user?.id; // 현재 로그인한 사용자의 ID를 가져옴
-
-  // useState 훅: 서버에서 받아올 가상의 게시글 목록 상태
-  // 나중에 게시글이 여러 개로 늘어날 때 map 함수를 사용할 것 (260505_적용함!)
-  // 260519 가상의 게시물 삭제함
-  const [posts, setPosts] = useState([]);
 
   // URL에서 검색 파라미터를 읽어오기
   const queryParams = new URLSearchParams(location.search);
@@ -31,43 +28,33 @@ function HomePage() {
     else searchChips.push(value);
   });
 
-  // 페이지가 렌더링될 때 서버에서 데이터를 불러오는 useEffect
-  // API 호출 (location.search가 바뀔 때마다 실행)
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        // 검색어가 있으면 '/posts/?location=' 가 되고, 없으면 '/posts/' 가 됨
-        const response = await api.get(`/posts/${location.search}`);
-        console.log("게시글 목록 불러오기 성공:", response.data);
+  // 기존 useState와 useEffect를 완전히 대체하는 useQuery
+  const { data: posts = [], isLoading } = useQuery({ 
+    // 키값에 location.search를 넣으면 검색어가 바뀔 때마다 다시 API를 호출
+    queryKey: ['posts', location.search], 
+    queryFn: async () => {
+      const response = await api.get(`/posts/${location.search}`);
+      console.log("게시글 목록 불러오기 성공:", response.data);
 
-        if (Array.isArray(response.data)) {
-          setPosts(response.data);
-        } else if (response.data && Array.isArray(response.data.posts)) {
-          setPosts(response.data.posts);
-        } else {
-          setPosts([]);
-        }
-      } catch (error) {
-        console.error("게시글 목록 불러오기 실패:", error);
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && Array.isArray(response.data.posts)) {
+        return response.data.posts;
       }
-    };
+      return [];
+    }
+  });
 
-    fetchPosts();
-  }, [location.search]); // 검색 파라미터가 바뀔 때마다 게시글 목록 새로 불러오기
-
+  // React Query 캐시 업데이트 방식 적용
   useEffect(() => {
     // WritePage에서 넘어온 데이터가 있는지 확인
     if (location.state?.newPost) {
-      // 새 글을 목록 맨 앞에 추가
-      setPosts((prevPosts) => {
-        // 이미 방금 쓴 글이 배열에 들어가 있으면 추가하지 않고 그대로 둠
-        const isExist = prevPosts.find(
-          (post) => post.id === location.state.newPost.id,
-        );
-        if (isExist) return prevPosts;
-
-        // 없다면 기존 글(prevPosts) 맨 앞에 새 글을 추가
-        return [location.state.newPost, ...prevPosts];
+      // 서버에서 새로 불러오기 전에 상단에 새 글 넣기
+      queryClient.setQueryData(['posts', location.search], (oldPosts) => {
+        if (!oldPosts) return [location.state.newPost];
+        const isExist = oldPosts.find((post) => post.id === location.state.newPost.id);
+        if (isExist) return oldPosts;
+        return [location.state.newPost, ...oldPosts];
       });
 
       // 토스트 알림 띄우기
@@ -130,8 +117,13 @@ function HomePage() {
 
         {/* 타임라인 카드 목록 */}
         <section className="flex flex-col gap-4">
-          {/* filteredPosts 대신 백엔드가 걸러준 posts 보여줌 */}
-          {posts.length > 0 ? (
+          {/* 로딩 중일 때 빈 화면 대신 텍스트 */}
+          {isLoading ? (
+            <div className="text-gray-3 py-10 text-center">
+              게시글을 불러오는 중입니다...
+            </div>
+          ) : 
+          posts.length > 0 ? (
             posts.map((post) => {
               const isMyPost = post.host === currentUserId;
               return (

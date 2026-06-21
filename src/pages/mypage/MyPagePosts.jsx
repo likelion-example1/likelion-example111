@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../../api.js";
 import GNB from "../../Components/GNB";
@@ -8,52 +8,39 @@ import useModalStore from "../../store/useModalStore";
 
 function MyPagePosts() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const showToast = useToastStore((state) => state.showToast);
   const openModal = useModalStore((state) => state.openModal);
 
   // 상태 관리
-  const [posts, setPosts] = useState([]); // 게시글 목록 상태
-
-  // 게시글 목록 데이터 가져오기 (GET)
-  const fetchPosts = async () => {
-    try {
-      // 내 프로필 정보 가져오기
+  // useState, useEffect 삭제 후 useQuery로 통합
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ["myPosts"],
+    queryFn: async () => {
       const profileResponse = await api.get("/accounts/profile/");
       const myNickname = profileResponse.data.username || profileResponse.data.name; 
 
-      // 서버에 있는 전체 게시글 목록 가져오기
       const response = await api.get("/posts/");
 
-      // 게시글의 'host_nickname'과 '내 닉네임'이 똑같은 글만 걸러내기
       const myOnlyPosts = response.data.filter(
         (post) => post.host_nickname === myNickname
       );
 
-      // 백엔드 데이터 + 가상 데이터
-      const formattedPosts = myOnlyPosts.map((post) => ({
+      return myOnlyPosts.map((post) => ({
         id: post.id,
         author: post.host_nickname || "익명",
         title: post.title,
         content: post.body,
-        keywords: [post.category || "없음", post.location || "없음"], // 태그 비어있을 시 고정값 '없음'
-        status: "매칭 중", // 고정값
-        matchRate: "80%", // 고정값
+        keywords: [post.category || "없음", post.location || "없음"],
+        status: "매칭 중",
+        matchRate: "80%",
         price: [post.min_order_amount ?? "설정되지 않음"],
-        photo: post.photo, // 백엔드에서 받아온 사진 URL
-        rawPost: post, // EditPage로 백엔드 데이터를 그대로 넘겨주기 위해 보관
+        photo: post.photo,
+        rawPost: post, 
       }));
-
-      setPosts(formattedPosts);
-    } catch (error) {
-      console.error("내가 쓴 글 목록 조회 실패:", error);
-      showToast("글 목록을 불러오는 데 실패했습니다.");
-    }
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+    },
+  });
 
   // 삭제하기 버튼을 눌렀을 때
   const handleDeleteClick = (post) => {
@@ -74,7 +61,10 @@ function MyPagePosts() {
           await api.delete(`/posts/${post.id}/`);
 
           // 성공 시 상태 업데이트 및 토스트 출력
-          setPosts((prev) => prev.filter((p) => p.id !== post.id));
+          // 캐시 무효화
+          queryClient.invalidateQueries({ queryKey: ["myPosts"] }); 
+          // 내가 쓴 글 삭제, 홈페이지 목록도 새로고침
+          queryClient.invalidateQueries({ queryKey: ["posts"] });
           showToast("삭제되었습니다.");
         } catch (error) {
           console.error("게시글 삭제 실패:", error);
@@ -102,8 +92,12 @@ function MyPagePosts() {
       </div>
 
       <main className="px-6">
-        {/* 게시글 리스트 렌더링 */}
-        {posts.length > 0 ? (
+        {/* 로딩 처리 */}
+        {isLoading ? (
+          <div className="text-gray-4 py-20 text-center font-medium">
+            게시글을 불러오는 중입니다...
+          </div>
+        ) :posts.length > 0 ? (
           posts.map((post) => {
             const statusIcon =
               post.status === "매칭 중"

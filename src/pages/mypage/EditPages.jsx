@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
+import { useMutation, useQueryClient } from "@tanstack/react-query"; // tanStack Query 사용
 import api from "../../api.js";
 
 import Input from "../../Components/Input";
@@ -18,6 +18,8 @@ function EditPage() {
   const fileInputRef = useRef(null);
 
   const showToast = useToastStore((state) => state.showToast);
+
+  const queryClient = useQueryClient();
 
   // MyPagePosts에서 넘겨준 게시글 데이터 받기
   const postToEdit = location.state?.post || {};
@@ -51,12 +53,11 @@ function EditPage() {
   );
 
   const [minPrice, setMinPrice] = useState(
-    postToEdit.targetAmount
-      ? postToEdit.targetAmount.replace(/,/g, "") // 금액에 쉼표는 제거
-      : "14000", // 백엔드에 없는 고정값...
+    postToEdit.min_order_amount ? String(postToEdit.min_order_amount) : "14000"
   );
-
-  const [deliveryFee, setDeliveryFee] = useState(postToEdit.deliveryFee || "0"); // 고정값
+  const [deliveryFee, setDeliveryFee] = useState(
+    postToEdit.delivery_fee ? String(postToEdit.delivery_fee) : "0"
+  );
 
   // keywords 처리
   const safeKeywords = postToEdit.keywords || ["없음", "없음"];
@@ -73,6 +74,31 @@ function EditPage() {
   const [selectedLocations, setSelectedLocations] = useState(initialLocations);
   const [selectedCategories, setSelectedCategories] =
     useState(initialCategories);
+
+  // useMutation 정의 (게시글 수정 연동 및 관련 캐시 전부 무효화)
+  const editPostMutation = useMutation({
+    mutationFn: async (payload) => {
+      const response = await api.put(`/posts/${postToEdit.id}/`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      // 수정 시, 연관된 모든 페이지의 캐시를 무효화하여 최신 데이터로 강제 갱신
+      queryClient.invalidateQueries({ queryKey: ["posts"] });          // HomePage (전체 글 목록)
+      queryClient.invalidateQueries({ queryKey: ["myPosts"] });        // MyPagePosts (내가 쓴 글 목록)
+      queryClient.invalidateQueries({ queryKey: ["matchingHistory"] }); // MyPageHistory (매칭 기록 목록)
+      queryClient.invalidateQueries({ queryKey: ["chats"] });          // ChatListPage (채팅방 목록)
+      
+      // 캐시 삭제
+      queryClient.invalidateQueries({ queryKey: ["postDetail", postToEdit.id] });
+
+      showToast("게시글이 수정되었습니다.");
+      navigate("/mypage/posts");
+    },
+    onError: (error) => {
+      console.error("게시글 수정 실패:", error);
+      showToast("게시글 수정에 실패했습니다.");
+    },
+  });
 
   const handleImageClick = () => fileInputRef.current.click();
 
@@ -105,29 +131,25 @@ function EditPage() {
       return;
     }
 
-    try {
+    if (!postToEdit.id) {
+      showToast("수정할 게시글 정보를 찾을 수 없습니다.");
+      return;
+    }
+
       const payload = {
         title: title,
         body: description,
         location: selectedLocations[0] || "없음", // 단일 선택 매핑 처리
         category: selectedCategories[0] || "없음", // 단일 선택 매핑 처리
         language: 1, // API 필수값
-        // 백엔드에 현재 없는 값(최소주문금액, 배달비 등)은 추후 수정해야함
+        min_order_amount: parseInt(minPrice.replace(/,/g, ""), 10) || 0,
+        delivery_fee: parseInt(deliveryFee.replace(/,/g, ""), 10) || 0,
       };
 
       console.log("벡엔드로 전달하기 직전의 payload:", payload);
 
-      if (postToEdit.id) {
-        await api.put(`/posts/${postToEdit.id}/`, payload);
-        showToast("게시글이 수정되었습니다.");
-        navigate("/mypage/posts");
-      } else {
-        showToast("수정할 게시글 정보를 찾을 수 없습니다.");
-      }
-    } catch (error) {
-      console.error("게시글 수정 실패:", error);
-      showToast("게시글 수정에 실패했습니다.");
-    }
+      // Mutation 트리거 실행
+    editPostMutation.mutate(payload);
   };
 
   return (
