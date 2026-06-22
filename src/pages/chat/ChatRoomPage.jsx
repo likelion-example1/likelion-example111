@@ -4,12 +4,18 @@ import api from "../../api.js";
 import useToastStore from "../../store/useToastStore.js";
 import useModalStore from "../../store/useModalStore";
 
+import useAuthStore from "../../store/useAuthStore.js";
+
 function ChatRoomPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
   // URL에서 :roomId 부분을 가져오는 useParams 훅
   const { roomId } = useParams();
+
+  // 로그인한 내 정보 가져오기
+  const { user } = useAuthStore();
+  const myNickname = user?.username || "";
 
   const showToast = useToastStore((state) => state.showToast);
   const openModal = useModalStore((state) => state.openModal);
@@ -30,13 +36,18 @@ function ChatRoomPage() {
     const fetchRoomData = async () => {
       try {
         // Promise.all을 사용해 두 API를 동시 호출
-      const [messagesResponse, requestsResponse] = await Promise.all([
+      const [messagesResponse, requestsResponse, profileResponse] = await Promise.all([
         api.get(`/chats/${roomId}/messages/`),
-        api.get(`/chats/${roomId}/requests/`)
+        api.get(`/chats/${roomId}/requests/`),
+        api.get("/accounts/profile/")
       ]);
 
       console.log("백엔드가 준 메시지 정보:", messagesResponse.data);
       console.log("백엔드가 준 대기자 목록 정보:", requestsResponse.data);
+      console.log("내 프로필 정보 확인:", profileResponse.data);
+
+      const myNickname = profileResponse.data.username || profileResponse.data.name || "";
+      const myId = profileResponse.data.id || profileResponse.data.pk;
 
       // 백엔드가 빈 배열이나 메시지 리스트만 보낸 경우
       if (Array.isArray(messagesResponse.data)) {
@@ -60,6 +71,44 @@ function ChatRoomPage() {
           })));
         }
       }
+        // 과거 메시지 내역
+        let rawMessages = [];
+        if (Array.isArray(messagesResponse.data)) {
+          rawMessages = messagesResponse.data;
+        } else if (messagesResponse.data?.messages) {
+          rawMessages = messagesResponse.data.messages;
+        }
+
+        const formattedMessages = rawMessages.map((msg) => {
+          const text = msg.text || msg.content || "";
+          
+          // 내가 보낸 메시지인지, 시스템 메시지인지 판단
+          const isSystemMessage = 
+            msg.type === "system" || 
+            msg.is_system === true || 
+            (!msg.sender_id && !msg.sender_nickname && text.includes("입장하셨습니다"));
+
+          // 시스템 메시지면 이름이 필요 없고, 일반 메시지면 이름이나 '익명'을 붙임
+          const senderName = isSystemMessage ? "" : (msg.sender_nickname || msg.sender || "익명");
+          
+          // 내 글인지 확인 (시스템 메시지가 아닐 때만 검사)
+          const isMyMessage = !isSystemMessage && (
+            (msg.is_mine === true) || 
+            (senderName === myNickname && myNickname !== "") || 
+            (msg.sender_id && myId && String(msg.sender_id) === String(myId)) ||
+            (msg.sender && myId && String(msg.sender) === String(myId))
+          );
+
+          return {
+            id: msg.id,
+            sender: senderName,
+            text: text,
+            isMine: isMyMessage, 
+            type: isSystemMessage ? "system" : "chat" 
+          };
+        });
+        
+        setMessages(formattedMessages);
           
       // 대기 중인 신청 목록 세팅
       let rawRequests = [];
@@ -70,8 +119,10 @@ function ChatRoomPage() {
       }
 
       const formattedRequests = rawRequests.map((req) => ({
-        // 백엔드의 guest_id를 프론트의 id로 변환
-        id: req.guest_id || req.id, 
+        // 백엔드의 request_id를 프론트의 id로 변환
+        id: req.request_id || req.id,
+        // 유저 아이디는 그냥 보관
+        guestid: req.guest_id, 
         // 백엔드의 guest_nickname을 프론트의 name으로 변환
         name: req.guest_nickname || req.name, 
         status: req.status 
