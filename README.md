@@ -3,11 +3,11 @@
 배달 메이트를 더욱 쉽게 구하는 웹 서비스, '한바구니'입니다.
 
 - 시연영상
+
 https://github.com/user-attachments/assets/3de2eed8-25fc-4854-8efc-2e4f9dc9f40c
 
 
-참여자
--
+- 참여자
 기획 디자인 - 정아인
 프론트엔드 - 신지민
 백엔드 - 공현주
