@@ -6,7 +6,10 @@
 
 https://github.com/user-attachments/assets/3de2eed8-25fc-4854-8efc-2e4f9dc9f40c
 
+- 참여자
 
 기획 디자인 - 정아인
+<br />
 프론트엔드 - 신지민
+<br />
 백엔드 - 공현주
