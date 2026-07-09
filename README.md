@@ -2,11 +2,12 @@
 이화여대 14기 멋쟁이사자처럼 토이 프로젝트
 배달 메이트를 더욱 쉽게 구하는 웹 서비스, '한바구니'입니다.
 
+- 시연영상
+https://github.com/user-attachments/assets/3de2eed8-25fc-4854-8efc-2e4f9dc9f40c
 
-https://github.com/user-attachments/assets/229f64c5-87cd-4ade-ae2a-4daa51b33851
 
-
-
+참여자
+-
 기획 디자인 - 정아인
 프론트엔드 - 신지민
 백엔드 - 공현주
