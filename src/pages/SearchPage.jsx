@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-{
-  /* 이 페이지는 대대적인 수정이 필요할 듯!!! 검색 페이지는 검색창과 키워드 필터 버튼들로 구성 */
-}
 function SearchPage() {
   const navigate = useNavigate();
 
@@ -51,14 +48,30 @@ function SearchPage() {
     setSelectedKeywords(selectedKeywords.filter((k) => k !== keywordToRemove));
   };
 
-  // 돋보기 버튼을 눌렀을 때 실행될 검색 함수
+  // 돋보기 버튼을 눌렀을 때 실행될 검색 함수 (백엔드가 원하는 형태로 추후수정)
   const handleSearch = () => {
-    navigate("/", {
-      state: {
-        searchKeywords: selectedKeywords,
-        searchText: searchText,
-      },
+    // 파라미터를 쉽게 만들어주는 브라우저 내장 객체
+    const params = new URLSearchParams();
+
+    // 선택된 키워드를 장소와 카테고리로 분류해서 이름표 붙여줌
+    selectedKeywords.forEach((keyword) => {
+      if (locationOptions.includes(keyword)) {
+        params.append("location", keyword);
+      } else if (categoryOptions.includes(keyword)) {
+        // 백엔드 명세(디저트_음료)에 맞게 텍스트 살짝 변환
+        const backendCategory =
+          keyword === "디저트 및 음료" ? "디저트_음료" : keyword;
+        params.append("category", backendCategory);
+      }
     });
+
+    // 직접 입력한 텍스트가 있다면 keyword라는 이름표를 붙이기
+    if (searchText.trim() !== "") {
+      params.append("keyword", searchText.trim());
+    }
+
+    // 완성된 파라미터를 달고 홈으로 이동!
+    navigate(`/?${params.toString()}`);
   };
 
   return (

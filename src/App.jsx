@@ -19,6 +19,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import WritePage from "./pages/WritePage";
 import SearchPage from "./pages/SearchPage";
+import PostDetailPage from "./pages/PostDetailPage";
 
 // 마이페이지 관련 불러오기
 import MypageMain from "./pages/mypage/MyPageMain";
@@ -67,6 +68,10 @@ function AuthGuard({ children }) {
 
 function App() {
   return (
+    <div className="bg-white min-h-screen flex justify-center font-sf">
+      
+      {/* 화면 최대 너비 고정 (GUI가 모바일 화면에 맞게 구현되어 프론트도 동일 적용) */}
+      <div className="bg-white w-full max-w-120 min-h-screen relative shadow-lg overflow-hidden">
     <BrowserRouter>
       {/* AuthGuard로 전체 Routes를 감싸서 페이지 이동 시마다 검사 */}
       <AuthGuard>
@@ -83,6 +88,7 @@ function App() {
           {/* 부가 기능 */}
           <Route path="/write" element={<WritePage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/posts/:postId" element={<PostDetailPage />} />
           {/* 마이페이지 */}
           <Route path="/mypage" element={<MypageMain />} />
           <Route path="/mypage/history" element={<MyPageHistory />} />
@@ -100,6 +106,8 @@ function App() {
         </Routes>
       </AuthGuard>
     </BrowserRouter>
+    </div>
+    </div>
   );
 }
 

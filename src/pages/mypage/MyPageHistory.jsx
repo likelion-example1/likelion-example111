@@ -1,64 +1,65 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
 import HistoryCard from "../../Components/HistoryCard"; // 리스트에 들어갈 항목들을 카드 컴포넌트로 제작
 import GNB from "../../Components/GNB";
+import useToastStore from "../../store/useToastStore";
 
 export function MyPageHistory() {
   const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
 
   // 현재 선택된 탭 저장 (기본값: '내가 받은')
   const [activeTab, setActiveTab] = useState("received");
 
-  // 가상의 매칭 내역 데이터 배열
-  const historyData = [
-    {
-      id: 1,
-      type: "received", // 내가 받은 탭에 보여질 것
-      author: "김이화",
-      title: "Waffle It Up",
-      content: "2교시 끝나고 와플잇업에서 배달시키실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 중",
-      matchRate: "80%",
-      price: "14,000",
-    },
+  // API 연동 및 데이터 분류 로직
+  // useEffect 삭제, useQuery 적용
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["matchingHistory"],
+    queryFn: async () => {
+      // 내 프로필 정보 가져오기
+      const profileResponse = await api.get("/accounts/profile/");
+      const myId = profileResponse.data.id || profileResponse.data.pk; 
+      const myNickname = profileResponse.data.username || profileResponse.data.name;
 
-    {
-      id: 2,
-      type: "received",
-      author: "김이화",
-      title: "아콘스톨",
-      content: "저녁시간에 아콘스톨에서 배달시키실 분 구합...",
-      keywords: ["한식", "포스코관"],
-      status: "매칭 중",
-      matchRate: "80%",
-      price: "14,000",
-    },
+      // 전체 게시글 데이터 가져오기
+      const postsResponse = await api.get("/posts/");
 
-    {
-      id: 3,
-      type: "received",
-      author: "김이화",
-      title: "카페코지",
-      content: "2교시 끝나고 카페코지에서 배달시키실 분 구...",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 완료",
-      matchRate: "80%",
-      price: "14,000",
-    },
+      // '내가 받은' 것과 '내가 보낸' 것을 분류
+      const processedData = postsResponse.data
+        .map((post) => {
+          const isHost = post.host_nickname === myNickname;
+          const isParticipant = !isHost && post.participants?.includes(myId);
 
-    {
-      id: 4,
-      type: "sent",
-      author: "김이화",
-      title: "카페인중독",
-      content: "와플 드실 분?!",
-      keywords: ["디저트 및 음료", "포스코관"],
-      status: "매칭 중",
-      matchRate: "80%",
-      price: "12,000",
+          let type = "";
+          if (isHost) {
+            type = "received"; 
+          } else if (isParticipant) {
+            type = "sent"; 
+          }
+
+          if (!type) return null;
+
+          return {
+            id: post.id,
+            type: type,
+            author: post.host_nickname || "익명",
+            title: post.title,
+            content: post.body,
+            keywords: [post.category || "없음", post.location || "없음"],
+            status: "매칭중",
+            matchRate: "0%", 
+            price: post.min_order_amount ?? "설정되지 않음",
+            photo: post.photo,
+            rawPost: post,
+          };
+        })
+        .filter(Boolean); // 배열에서 null로 걸러진 데이터들 삭제
+
+      return processedData;
     },
-  ];
+  });
 
   // 전체 데이터 중 현재 선택된 탭(activeTab)과 타입이 일치하는 데이터만 걸러내는 함수!
   const filteredData = historyData.filter((post) => post.type === activeTab);
@@ -100,8 +101,12 @@ export function MyPageHistory() {
 
         <section className="px-6">
           {/* 필터링된 매칭 내역 리스트 */}
-
-          {filteredData.length > 0 ? (
+          {isLoading ? (
+            <div className="text-gray-4 py-16 text-center font-medium">
+              매칭 내역을 불러오는 중입니다...
+            </div>
+          ) :
+          filteredData.length > 0 ? (
             filteredData.map((post) => (
               <HistoryCard key={post.id} post={post} />
             ))

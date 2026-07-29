@@ -34,8 +34,8 @@ function LoginPage() {
     try {
       // 백엔드 서버로 로그인 요청 (POST)
       const response = await api.post("/accounts/login/", {
-        username: id,
-        password: pw,
+        id: id,
+        pw: pw,
       });
 
       console.log("로그인 상태", response.data);

@@ -16,13 +16,16 @@ function WritePage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
+  const [min_order_amount, setMinOrderAmount] = useState("");
+  const [delivery_fee, setDeliveryFee] = useState("");
 
   // 키워드는 여러 개 선택할 수 있으므로 배열([])로 상태 만들기
   // 260521, 백엔드 명세에서는 다중 선택이 아니고 단일선택이라 코드 변경. 추후 다중 선택이 맞으면 코드 원상복귀 예정
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,11 +54,17 @@ function WritePage() {
     fileInputRef.current.click();
   };
 
+// 유저가 사진을 선택했을 때 실행되는 함수
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      alert(`${file.name} 사진이 첨부되었습니다!`);
-      // ★★★★★★실제로 이미지 서버로 전송하려면 추가 코드 작성 필요
+      setImageFile(file); // 서버로 보낼 파일 원본 저장
+      
+      // 브라우저에서 임시로 사진을 띄워볼 수 있는 가짜 URL(미리보기용) 생성
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl); 
+      
+      showToast(`${file.name} 사진이 첨부되었습니다!`);
     }
   };
 
@@ -79,25 +88,36 @@ function WritePage() {
     }
     setIsLoading(true);
 
-    try {
-      // 백엔드 서버로 데이터 전송 (POST)
-      const response = await api.post("/posts/", {
-        title: title,
-        body: description,
-        location: selectedLocation,
-        category: selectedCategory,
-        language: 1, // 1: KOR
-        // 금액 데이터(minPrice, deliveryFee)는 현재 서버에 명시되어 있지 않으므로 전송하지 않음. 추후수정!
+try {
+      // 사진을 포함하여 데이터를 보내기 위해 FormData 객체 생성
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("body", description);
+      formData.append("location", selectedLocation);
+      formData.append("category", selectedCategory);
+      formData.append("language", 1); // 1: KOR
+      formData.append("min_order_amount", min_order_amount || 0);
+      formData.append("delivery_fee", delivery_fee || 0);
+      
+      // 사진 파일이 존재할 경우에만 백엔드의 'photo' 필드 이름에 맞춰 추가
+      if (imageFile) {
+        formData.append("photo", imageFile);
+      }
+
+      // formData를 통째로 전송
+      const response = await api.post("/posts/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       console.log("글 작성 성공:", response.data);
 
-      // 성공 시 홈으로 이동하며 상태값 전달
       navigate("/", {
         state: {
           showToast: true,
           message: "업로드 되었습니다!",
-          newPost: response.data, // 서버가 방금 만든 진짜 데이터 객체를 홈으로 넘겨줌
+          newPost: response.data,
         },
       });
     } catch (error) {
@@ -119,18 +139,29 @@ function WritePage() {
         <h1 className="ml-2 text-lg font-bold text-black">글 쓰기</h1>
       </header>
 
-      <main className="px-6 py-4">
+    <main className="px-6 py-4">
         {/* 사진 업로드 */}
         <section className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div
               onClick={handleImageClick}
-              className="flex h-24 w-30 cursor-pointer flex-col items-center justify-center rounded-lg bg-gray-100 transition-colors hover:bg-gray-200"
+              className="flex h-24 w-30 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg bg-gray-100 transition-colors hover:bg-gray-200"
             >
-              <span className="text-xl opacity-40">📷</span>
-              <span className="mt-1 text-xs font-bold text-gray-400">
-                사진 추가
-              </span>
+              {/* 미리보기 이미지가 있으면 띄우고, 없으면 default 표시 */}
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="업로드 미리보기"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <>
+                  <span className="text-xl opacity-40">📷</span>
+                  <span className="mt-1 text-xs font-bold text-gray-400">
+                    사진 추가
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -183,8 +214,8 @@ function WritePage() {
               <Input
                 type="number"
                 placeholder="0"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
+                value={min_order_amount}
+                onChange={(e) => setMinOrderAmount(e.target.value)}
                 className="pr-10" // 글자가 길어져도 '원'과 겹치지 않게 우측 여백 추가
               />
               <span className="absolute right-4 text-sm font-bold text-black">
@@ -198,7 +229,7 @@ function WritePage() {
               <Input
                 type="number"
                 placeholder="0"
-                value={deliveryFee}
+                value={delivery_fee}
                 onChange={(e) => setDeliveryFee(e.target.value)}
                 className="pr-10"
               />

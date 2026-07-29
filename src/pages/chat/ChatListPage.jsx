@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState } from "react"; // useEffect 삭제, useQuery로 대체
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
 import ChatRoomCard from "../../Components/ChatRoomCard";
 import GNB from "../../Components/GNB";
 
@@ -11,99 +13,51 @@ function ChatListPage() {
   // 지난 매칭 숨기기 여부 (기본값 false = 보여줌)
   const [isPastHidden, setIsPastHidden] = useState(false);
 
-  // 가상의 진행 중인 매칭 데이터
-  const receivedActiveChats = [
-    {
-      id: 101,
-      status: "매칭 중",
-      restaurantName: "Waffle it up",
-      locations: ["포스코관"],
-      categories: ["디저트 및 음료"],
-      author: "김이화",
-      lastMessage: "왈왈: 저는 다 담았습니다!",
-      participants: [1, 2, 3, 4],
-      newRequests: 3, // 새로운 매칭신청 배지 숫자
-      currentAmount: "8,700",
-      targetAmount: "14,000",
-    },
-  ];
+  //  채팅방 목록을 저장할 상태 추가
+  // useState와 useEffect 삭제, useQuery로 대체
+  const { data: formattedChats = [], isLoading } = useQuery({
+    queryKey: ["chats"],
+    queryFn: async () => {
+      const response = await api.get("/chats/");
+      console.log("백엔드가 보내준 데이터:", response.data);
 
-  // 가상의 지난 매칭 데이터
-  const receivedPastChats = [
-    {
-      id: 201,
-      status: "매칭 완료",
-      restaurantName: "사장님 돈가스",
-      locations: ["포스코관"],
-      categories: ["일식"],
-      author: "김이화",
-      lastMessage: "감자: 다들 맛있게 드세요!",
-      participants: [1, 2, 3, 4],
-      newRequests: 0,
-      currentAmount: "19,000",
-      targetAmount: "17,000",
-    },
-    {
-      id: 202,
-      status: "매칭 완료",
-      restaurantName: "프레퍼스",
-      locations: ["학문관"],
-      categories: ["샐러드"],
-      author: "김이화",
-      lastMessage: "감자: 다들 맛있게 드세요!",
-      participants: [1, 2, 3, 4],
-      newRequests: 0,
-      currentAmount: "19,000",
-      targetAmount: "17,000",
-    },
-  ];
+      if (Array.isArray(response.data)) {
+        const processedChats = response.data.map((room) => ({
+          id: room.id,
+          status:
+            room.status_display === "모집중" || room.status_display === "매칭 중"
+              ? "매칭 중"
+              : "매칭 완료",
+          restaurantName: room.title || "제목 없음",
+          locations: [room.location || "장소 미정"],
+          categories: [room.category || "기타"],
+          author: room.host_nickname || "익명",
+          lastMessage: room.last_message || "아직 대화가 없습니다.",
+          newRequests: room.pending_count || 0,
 
-  const sentActiveChats = [
-    {
-      id: 102,
-      status: "매칭 중",
-      restaurantName: "Dessert 39",
-      locations: ["포스코관"],
-      categories: ["디저트 및 음료"],
-      author: "아기사자",
-      lastMessage: "대화 미리보기 불가능",
-      participants: [1, 2, 3, 4],
-      newRequests: 0,
-      currentAmount: "8,700",
-      targetAmount: "14,000",
-      role: "sender",
+          // 기타 빈 값들 고정값 처리
+          participants: [],
+          currentAmount: "0",
+          targetAmount: [room.min_order_amount || ""],
+
+          role: room.type || "received",
+        }));
+        
+        console.log("프론트엔드 통과 데이터:", processedChats);
+        return processedChats;
+      }
+      
+      // 배열이 아니면 빈 배열 반환
+      return [];
     },
-  ];
-  const sentPastChats = [
-    {
-      id: 202,
-      status: "매칭 완료",
-      restaurantName: "유야케 도쿄",
-      locations: ["포스코관"],
-      categories: ["일식"],
-      author: "yummy",
-      lastMessage: "gamja: 잘 찾아갔습니다!",
-      participants: [1, 2, 3, 4],
-      newRequests: 0,
-      currentAmount: "19,000",
-      targetAmount: "17,000",
-      role: "sender",
-    },
-    {
-      id: 203,
-      status: "매칭 완료",
-      restaurantName: "훅트 포케",
-      locations: ["학문관"],
-      categories: ["샐러드"],
-      author: "집가고싶다",
-      lastMessage: "shushu: 맛있게 드세용",
-      participants: [1, 2, 3, 4],
-      newRequests: 0,
-      currentAmount: "19,000",
-      targetAmount: "17,000",
-      role: "sender",
-    },
-  ];
+  });
+
+
+  // 현재 탭 및 상태(진행중/지난매칭)에 따라 필터링
+  const receivedActiveChats = formattedChats.filter(room => room.role === "received" && room.status === "매칭 중");
+  const receivedPastChats = formattedChats.filter(room => room.role === "received" && room.status !== "매칭 중");
+  const sentActiveChats = formattedChats.filter(room => room.role === "sent" && room.status === "매칭 중");
+  const sentPastChats = formattedChats.filter(room => room.role === "sent" && room.status !== "매칭 중");
 
   // 현재 탭에 따라 보여줄 데이터를 결정
   const displayActiveChats =
@@ -111,14 +65,20 @@ function ChatListPage() {
   const displayPastChats =
     activeTab === "received" ? receivedPastChats : sentPastChats;
 
+    console.log(`현재 '${activeTab}' 탭에 띄울 진행중 방 개수:`, displayActiveChats.length);
+  // 전체 안 읽은 요청 수 계산
+  const totalNewRequests = receivedActiveChats.reduce((sum, room) => sum + room.newRequests, 0);
+  
   // 채팅방 클릭 시 해당 방으로 이동하는 함수
   const goToChatRoom = (room) => {
-    // 내가 보낸 요청 중 '매칭 중'인 방을 누르면, 초대가 수락되었다고 가정하고 이동 (이후 백엔드 로직 구현 후 수정!!)
-    if (room.role === "sender" && room.status === "매칭 중") {
-      navigate(`/chat/${room.id}`, { state: { isInvited: true } });
-    } else {
-      navigate(`/chat/${room.id}`);
-    }
+    // 내가 보낸 요청 중 '매칭 중'인 방을 누르면, 초대가 수락되어 이동
+    navigate(`/chat/${room.id}`, { 
+      state: { 
+        isParticipant: room.role === "sent",
+        title: room.restaurantName,
+        role: room.role 
+      } 
+    });
   };
   return (
     <div className="font-sf min-h-screen bg-white pb-24">
@@ -145,7 +105,7 @@ function ChatListPage() {
           내가 받은
           {/* 빨간색 알림 배지 */}
           <span className="bg-red absolute -top-1.5 -right-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-            3
+            {totalNewRequests}
           </span>
         </button>
 
@@ -162,6 +122,13 @@ function ChatListPage() {
       </div>
 
       <main className="px-6 py-2">
+        {/* 로딩 상태 처리 */}
+        {isLoading ? (
+          <div className="py-10 text-center text-sm font-bold text-gray-400">
+            채팅방을 불러오는 중입니다...
+          </div>
+        ) : (
+          <>
         {/* 진행 중인 채팅방 목록 */}
         <section>
           {displayActiveChats.map((room) => (
@@ -195,7 +162,9 @@ function ChatListPage() {
               />
             ))}
           </section>
-        )}
+              )}
+              </>
+               )}
       </main>
 
       {/* 바텀 네비게이션 바 */}

@@ -16,8 +16,6 @@ const TimelineCard = ({ post, isMyPost }) => {
 
   // 매칭 신청하기 버튼 클릭 시
   const handleApplyClick = (e) => {
-    // ★★★★★★★ 260519_이 부분은 게시글 상세 페이지 구현안할거면 없어도 됨...
-    // 260523_기디님께서 만들어주신다고 하심! 상세 페이지 생기면 추후 수정
     e.stopPropagation(); // 매칭 신청하기 눌렀을 때 게시글 상세 페이지로 가는 것 막기
     if (isMyPost || isApplied) return;
 
@@ -44,19 +42,13 @@ const TimelineCard = ({ post, isMyPost }) => {
           showToast("매칭 신청이 완료되었습니다.");
         } catch (error) {
           console.error("매칭 신청 실패:", error);
-          // 백엔드에서 보내준 에러 메시지가 있다면 띄우고, 없으면 기본 메시지
-          const errorMsg =
-            error.response?.data?.message ||
-            error.response?.data?.detail ||
-            error.response?.data?.error ||
-            "매칭 신청에 실패했습니다.";
-          showToast(errorMsg);
+          const errorMessage = error.message || error.response?.data?.message || error.data?.message || "매칭 신청에 실패했습니다.";
+          showToast(errorMessage);
         }
       },
     });
   };
 
-  // ★★★★★★ 추후 수정!!! 아직 게시글 상세 페이지 없음
   // 카드 전체 클릭 시 상세 페이지로 이동
   const handleCardClick = () => {
     navigate(`/posts/${post.id}`);
@@ -147,7 +139,7 @@ const TimelineCard = ({ post, isMyPost }) => {
             </div>
 
             <span className="text-sm font-bold">
-              {post.currentAmount || "8,700"} / {post.targetAmount || "14,000"}
+              {post.currentAmount ?? "0"} / {post.min_order_amount ?? "0"}
             </span>
           </div>
         </div>
